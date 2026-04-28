@@ -1,0 +1,6 @@
+@ProctorIQ_HostAddress = http://localhost:5277
+
+GET {{ProctorIQ_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
