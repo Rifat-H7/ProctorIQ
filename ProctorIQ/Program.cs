@@ -1,6 +1,7 @@
 using System.Text;
 using FluentValidation;
 using FluentValidation.AspNetCore;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -8,6 +9,7 @@ using ProctorIQ.Application.Auth;
 using ProctorIQ.Application.Exams;
 using ProctorIQ.Application.Results;
 using ProctorIQ.Application.Validators;
+using ProctorIQ.Domain;
 using ProctorIQ.Domain.Abstractions;
 using ProctorIQ.Infrastructure.Auth;
 using ProctorIQ.Infrastructure.Data;
@@ -20,12 +22,23 @@ builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Jwt"));
 builder.Services.AddDbContext<AppDbContext>(opts =>
     opts.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-builder.Services.AddScoped<IPasswordHasher, BcryptPasswordHasher>();
+builder.Services.AddIdentityCore<AppUser>(opts =>
+    {
+        opts.User.RequireUniqueEmail = true;
+        opts.Password.RequiredLength = 8;
+        opts.Password.RequireDigit = true;
+        opts.Password.RequireNonAlphanumeric = false;
+        opts.Password.RequireUppercase = false;
+    })
+    .AddRoles<IdentityRole<Guid>>()
+    .AddEntityFrameworkStores<AppDbContext>();
+
 builder.Services.AddScoped<ITokenService, JwtTokenService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IExamService, ExamService>();
 builder.Services.AddScoped<IAttemptService, AttemptService>();
 builder.Services.AddScoped<IResultService, ResultService>();
+builder.Services.AddScoped<ICertificateService, CertificateService>();
 builder.Services.AddHostedService<ExamTimerService>();
 
 builder.Services.AddFluentValidationAutoValidation();

@@ -1,15 +1,14 @@
+using Microsoft.AspNetCore.Identity;
+
 namespace ProctorIQ.Domain;
 
-public class User
+public class AppUser : IdentityUser<Guid>
 {
-    public Guid Id { get; set; } = Guid.NewGuid();
     public string FullName { get; set; } = string.Empty;
-    public string Email { get; set; } = string.Empty;
-    public string PasswordHash { get; set; } = string.Empty;
     public UserRole Role { get; set; }
     public bool IsActive { get; set; } = true;
-    public string? RefreshToken { get; set; }
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+    public List<RefreshToken> RefreshTokens { get; set; } = [];
 }
 
 public class Exam
@@ -70,4 +69,34 @@ public class CandidateAnswer
     public Guid? SelectedOptionId { get; set; }
     public bool IsCorrect { get; set; }
     public decimal MarksAwarded { get; set; }
+}
+
+public class RefreshToken
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid UserId { get; set; }
+    public string Token { get; set; } = string.Empty;
+    public DateTime ExpiresAtUtc { get; set; }
+    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+    public DateTime? RevokedAtUtc { get; set; }
+}
+
+public class ProctorLog
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid AttemptId { get; set; }
+    public Guid ProctorId { get; set; }
+    public string EventType { get; set; } = string.Empty;
+    public string EventDetail { get; set; } = string.Empty;
+    public DateTime LoggedAtUtc { get; set; } = DateTime.UtcNow;
+}
+
+public class Certificate
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid AttemptId { get; set; }
+    public Guid CandidateId { get; set; }
+    public DateTime IssuedAtUtc { get; set; } = DateTime.UtcNow;
+    public string VerificationCode { get; set; } = string.Empty;
+    public string? PdfPath { get; set; }
 }

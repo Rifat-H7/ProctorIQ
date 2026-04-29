@@ -21,14 +21,14 @@ public class JwtTokenService(IOptions<JwtOptions> jwt) : ITokenService
 {
     private readonly JwtOptions _jwt = jwt.Value;
 
-    public TokenPair CreateTokenPair(User user)
+    public TokenPair CreateTokenPair(AppUser user)
     {
         var expires = DateTime.UtcNow.AddMinutes(_jwt.AccessTokenMinutes);
         var claims = new[]
         {
             new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new Claim(JwtRegisteredClaimNames.Email, user.Email),
+            new Claim(JwtRegisteredClaimNames.Email, user.Email ?? string.Empty),
             new Claim(ClaimTypes.Role, user.Role.ToString())
         };
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwt.SigningKey));

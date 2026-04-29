@@ -10,5 +10,5 @@ public interface IPasswordHasher
 
 public interface ITokenService
 {
-    TokenPair CreateTokenPair(User user);
+    TokenPair CreateTokenPair(AppUser user);
 }
