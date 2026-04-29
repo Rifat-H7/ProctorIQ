@@ -36,4 +36,6 @@ public interface IAttemptService
     Task<Guid> StartAttemptAsync(StartAttemptRequest request, Guid candidateId, CancellationToken ct);
     Task SaveAnswerAsync(Guid attemptId, SaveAnswerRequest request, Guid candidateId, CancellationToken ct);
     Task SubmitAttemptAsync(Guid attemptId, Guid candidateId, CancellationToken ct);
+    Task<List<object>> ListActiveProctorExamsAsync(CancellationToken ct);
+    Task<object> GetExamDashboardAsync(Guid examId, CancellationToken ct);
 }

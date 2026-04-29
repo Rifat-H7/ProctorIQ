@@ -59,6 +59,10 @@ public class ExamAttempt
     public decimal? Percentage { get; set; }
     public bool? IsPassed { get; set; }
     public int TabSwitchCount { get; set; }
+    public int WarningCount { get; set; }
+    public AttemptSessionStatus SessionStatus { get; set; } = AttemptSessionStatus.Disconnected;
+    public DateTime? LastSeenAtUtc { get; set; }
+    public string? CurrentConnectionId { get; set; }
     public AttemptStatus Status { get; set; } = AttemptStatus.InProgress;
     public List<CandidateAnswer> Answers { get; set; } = [];
 }

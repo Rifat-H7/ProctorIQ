@@ -40,6 +40,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
         b.Entity<CandidateAnswer>().Property(x => x.MarksAwarded).HasPrecision(4, 2);
         b.Entity<QuestionOption>().HasIndex(x => new { x.QuestionId, x.IsCorrect });
         b.Entity<ExamAttempt>().HasIndex(x => new { x.ExamId, x.CandidateId }).IsUnique();
+        b.Entity<ExamAttempt>().HasIndex(x => new { x.ExamId, x.SessionStatus });
+        b.Entity<ExamAttempt>().HasIndex(x => x.LastSeenAtUtc);
 
         b.Entity<RefreshToken>().HasIndex(x => x.Token).IsUnique();
         b.Entity<RefreshToken>().HasOne<AppUser>().WithMany(x => x.RefreshTokens).HasForeignKey(x => x.UserId);

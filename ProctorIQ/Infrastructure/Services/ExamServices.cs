@@ -80,7 +80,12 @@ public class AttemptService(AppDbContext db) : IAttemptService
     {
         var exists = await db.ExamAttempts.AnyAsync(x => x.ExamId == request.ExamId && x.CandidateId == candidateId, ct);
         if (exists) throw new InvalidOperationException("Attempt already exists.");
-        var attempt = new ExamAttempt { ExamId = request.ExamId, CandidateId = candidateId };
+        var attempt = new ExamAttempt
+        {
+            ExamId = request.ExamId,
+            CandidateId = candidateId,
+            SessionStatus = AttemptSessionStatus.Disconnected
+        };
         db.ExamAttempts.Add(attempt);
         await db.SaveChangesAsync(ct);
         return attempt.Id;
@@ -105,7 +110,57 @@ public class AttemptService(AppDbContext db) : IAttemptService
         var attempt = await db.ExamAttempts.FirstAsync(x => x.Id == attemptId && x.CandidateId == candidateId, ct);
         await AttemptGradingHelper.GradeAttemptAsync(db, attempt, ct);
         attempt.Status = AttemptStatus.Submitted;
+        attempt.SessionStatus = AttemptSessionStatus.Submitted;
         await db.SaveChangesAsync(ct);
+    }
+
+    public async Task<List<object>> ListActiveProctorExamsAsync(CancellationToken ct) =>
+        await db.Exams
+            .Where(x => x.StartTimeUtc <= DateTime.UtcNow && x.EndTimeUtc >= DateTime.UtcNow)
+            .Select(x => (object)new { x.Id, x.Title, x.StartTimeUtc, x.EndTimeUtc, x.Status })
+            .ToListAsync(ct);
+
+    public async Task<object> GetExamDashboardAsync(Guid examId, CancellationToken ct)
+    {
+        var attempts = await db.ExamAttempts
+            .Where(x => x.ExamId == examId)
+            .Select(x => new
+            {
+                x.Id,
+                x.CandidateId,
+                x.Status,
+                x.SessionStatus,
+                x.LastSeenAtUtc,
+                x.TabSwitchCount,
+                x.WarningCount,
+                x.Score,
+                x.Percentage
+            })
+            .ToListAsync(ct);
+
+        var recentLogs = await db.ProctorLogs
+            .Where(x => db.ExamAttempts.Any(a => a.Id == x.AttemptId && a.ExamId == examId))
+            .OrderByDescending(x => x.LoggedAtUtc)
+            .Take(50)
+            .Select(x => new { x.AttemptId, x.ProctorId, x.EventType, x.EventDetail, x.LoggedAtUtc })
+            .ToListAsync(ct);
+
+        return new
+        {
+            ExamId = examId,
+            Summary = new
+            {
+                TotalAttempts = attempts.Count,
+                Connected = attempts.Count(x => x.SessionStatus == AttemptSessionStatus.Connected),
+                Suspicious = attempts.Count(x => x.SessionStatus == AttemptSessionStatus.Suspicious),
+                Disconnected = attempts.Count(x => x.SessionStatus == AttemptSessionStatus.Disconnected),
+                Submitted = attempts.Count(x => x.Status == AttemptStatus.Submitted),
+                Terminated = attempts.Count(x => x.Status == AttemptStatus.Terminated),
+                Expired = attempts.Count(x => x.Status == AttemptStatus.Expired)
+            },
+            Attempts = attempts,
+            RecentIncidents = recentLogs
+        };
     }
 }
 

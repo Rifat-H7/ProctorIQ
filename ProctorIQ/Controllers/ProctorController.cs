@@ -1,0 +1,19 @@
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using ProctorIQ.Application.Exams;
+
+namespace ProctorIQ.Controllers;
+
+[ApiController]
+[Route("api/proctor")]
+[Authorize(Roles = "Proctor,Admin")]
+public class ProctorController(IAttemptService attempts) : ControllerBase
+{
+    [HttpGet("exams/active")]
+    public async Task<IActionResult> ActiveExams(CancellationToken ct) =>
+        Ok(await attempts.ListActiveProctorExamsAsync(ct));
+
+    [HttpGet("exams/{examId:guid}/dashboard")]
+    public async Task<IActionResult> Dashboard(Guid examId, CancellationToken ct) =>
+        Ok(await attempts.GetExamDashboardAsync(examId, ct));
+}

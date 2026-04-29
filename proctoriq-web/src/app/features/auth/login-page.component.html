@@ -1,0 +1,10 @@
+<div class="auth-wrap">
+  <form (ngSubmit)="submit()" class="card">
+    <h1>Sign in</h1>
+    <label>Email <input [(ngModel)]="email" name="email" type="email" required /></label>
+    <label>Password <input [(ngModel)]="password" name="password" type="password" required /></label>
+    <button type="submit">Login</button>
+    @if (error()) { <p class="error">{{ error() }}</p> }
+    <p><a routerLink="/register">Create account</a></p>
+  </form>
+</div>
