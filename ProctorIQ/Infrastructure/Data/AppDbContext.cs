@@ -33,6 +33,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
         b.Entity<Exam>().HasMany(x => x.Questions).WithOne().HasForeignKey(x => x.ExamId);
         b.Entity<Question>().HasMany(x => x.Options).WithOne().HasForeignKey(x => x.QuestionId);
         b.Entity<ExamAttempt>().HasMany(x => x.Answers).WithOne().HasForeignKey(x => x.AttemptId);
+        b.Entity<ExamAttempt>().Property(x => x.Score).HasPrecision(6, 2);
+        b.Entity<ExamAttempt>().Property(x => x.Percentage).HasPrecision(5, 2);
+        b.Entity<CandidateAnswer>().Property(x => x.MarksAwarded).HasPrecision(4, 2);
         b.Entity<QuestionOption>().HasIndex(x => new { x.QuestionId, x.IsCorrect });
         b.Entity<ExamAttempt>().HasIndex(x => new { x.ExamId, x.CandidateId }).IsUnique();
 
