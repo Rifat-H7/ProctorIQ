@@ -20,6 +20,16 @@ public class ExamTimerService(IServiceScopeFactory scopeFactory, IHubContext<Exa
                 var seconds = (int)Math.Max(0, (exam.EndTimeUtc - now).TotalSeconds);
                 await hub.Clients.Group($"{exam.Id}:Candidate").SendAsync("TimerTick", exam.Id, seconds, stoppingToken);
             }
+
+            var expired = await db.ExamAttempts
+                .Where(x => x.Status == Domain.AttemptStatus.InProgress && db.Exams.Any(e => e.Id == x.ExamId && e.EndTimeUtc < now))
+                .ToListAsync(stoppingToken);
+            foreach (var attempt in expired)
+            {
+                attempt.Status = Domain.AttemptStatus.Expired;
+                attempt.SubmittedAtUtc = now;
+            }
+            if (expired.Count > 0) await db.SaveChangesAsync(stoppingToken);
             await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken);
         }
     }
