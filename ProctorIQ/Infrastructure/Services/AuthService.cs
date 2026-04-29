@@ -45,6 +45,7 @@ public class AuthService(
         var normalized = request.Email.Trim().ToLowerInvariant();
         var user = await userManager.Users.FirstOrDefaultAsync(x => x.Email == normalized, ct)
             ?? throw new UnauthorizedAccessException("Invalid credentials.");
+        if (!user.IsActive) throw new UnauthorizedAccessException("Account is deactivated.");
         var valid = await userManager.CheckPasswordAsync(user, request.Password);
         if (!valid) throw new UnauthorizedAccessException("Invalid credentials.");
         var pair = await IssueAndPersistRefreshAsync(user, ct);
@@ -57,6 +58,7 @@ public class AuthService(
         var normalized = request.Email.Trim().ToLowerInvariant();
         var user = await userManager.Users.FirstOrDefaultAsync(x => x.Email == normalized, ct)
             ?? throw new UnauthorizedAccessException("Invalid refresh request.");
+        if (!user.IsActive) throw new UnauthorizedAccessException("Account is deactivated.");
         var active = await db.RefreshTokens
             .Where(x => x.UserId == user.Id && x.Token == request.RefreshToken && x.RevokedAtUtc == null && x.ExpiresAtUtc > DateTime.UtcNow)
             .OrderByDescending(x => x.CreatedAtUtc)

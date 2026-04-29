@@ -23,6 +23,8 @@ public class Exam
     public int PassMarks { get; set; }
     public bool IsRandomised { get; set; }
     public ExamStatus Status { get; set; } = ExamStatus.Draft;
+    public bool IsDeleted { get; set; }
+    public DateTime? DeletedAtUtc { get; set; }
     public List<Question> Questions { get; set; } = [];
 }
 

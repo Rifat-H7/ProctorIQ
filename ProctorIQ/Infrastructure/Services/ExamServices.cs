@@ -63,6 +63,15 @@ public class ExamService(AppDbContext db) : IExamService
             Options = q.Options.Select(o => new { o.Id, o.OptionText })
         }).ToList();
     }
+
+    public async Task SoftDeleteExamAsync(Guid examId, CancellationToken ct)
+    {
+        var exam = await db.Exams.FirstOrDefaultAsync(x => x.Id == examId, ct)
+            ?? throw new KeyNotFoundException("Exam not found.");
+        exam.IsDeleted = true;
+        exam.DeletedAtUtc = DateTime.UtcNow;
+        await db.SaveChangesAsync(ct);
+    }
 }
 
 public class AttemptService(AppDbContext db) : IAttemptService
@@ -94,21 +103,7 @@ public class AttemptService(AppDbContext db) : IAttemptService
     public async Task SubmitAttemptAsync(Guid attemptId, Guid candidateId, CancellationToken ct)
     {
         var attempt = await db.ExamAttempts.FirstAsync(x => x.Id == attemptId && x.CandidateId == candidateId, ct);
-        var exam = await db.Exams.FirstAsync(x => x.Id == attempt.ExamId, ct);
-        var answers = await db.CandidateAnswers.Where(x => x.AttemptId == attemptId).ToListAsync(ct);
-        decimal total = 0;
-        foreach (var ans in answers)
-        {
-            var correct = await db.QuestionOptions.AnyAsync(o => o.QuestionId == ans.QuestionId && o.Id == ans.SelectedOptionId && o.IsCorrect, ct);
-            var marks = await db.Questions.Where(q => q.Id == ans.QuestionId).Select(q => q.Marks).FirstAsync(ct);
-            ans.IsCorrect = correct;
-            ans.MarksAwarded = correct ? marks : 0;
-            total += ans.MarksAwarded;
-        }
-        attempt.Score = total;
-        attempt.Percentage = exam.TotalMarks == 0 ? 0 : Math.Round((total / exam.TotalMarks) * 100, 2);
-        attempt.IsPassed = total >= exam.PassMarks;
-        attempt.SubmittedAtUtc = DateTime.UtcNow;
+        await AttemptGradingHelper.GradeAttemptAsync(db, attempt, ct);
         attempt.Status = AttemptStatus.Submitted;
         await db.SaveChangesAsync(ct);
     }

@@ -26,8 +26,8 @@ public class ExamTimerService(IServiceScopeFactory scopeFactory, IHubContext<Exa
                 .ToListAsync(stoppingToken);
             foreach (var attempt in expired)
             {
+                await AttemptGradingHelper.GradeAttemptAsync(db, attempt, stoppingToken);
                 attempt.Status = Domain.AttemptStatus.Expired;
-                attempt.SubmittedAtUtc = now;
             }
             if (expired.Count > 0) await db.SaveChangesAsync(stoppingToken);
             await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken);

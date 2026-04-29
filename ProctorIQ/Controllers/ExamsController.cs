@@ -30,4 +30,12 @@ public class ExamsController(IExamService exams) : ControllerBase
     [Authorize(Roles = "Candidate")]
     public async Task<IActionResult> CandidateQuestions(Guid examId, CancellationToken ct) =>
         Ok(await exams.GetQuestionsForCandidateAsync(examId, ct));
+
+    [HttpDelete("{examId:guid}")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> Delete(Guid examId, CancellationToken ct)
+    {
+        await exams.SoftDeleteExamAsync(examId, ct);
+        return NoContent();
+    }
 }

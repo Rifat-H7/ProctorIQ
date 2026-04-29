@@ -28,6 +28,7 @@ public interface IExamService
     Task<List<object>> ListExamsAsync(CancellationToken ct);
     Task<Guid> AddQuestionAsync(AddQuestionRequest request, CancellationToken ct);
     Task<List<object>> GetQuestionsForCandidateAsync(Guid examId, CancellationToken ct);
+    Task SoftDeleteExamAsync(Guid examId, CancellationToken ct);
 }
 
 public interface IAttemptService

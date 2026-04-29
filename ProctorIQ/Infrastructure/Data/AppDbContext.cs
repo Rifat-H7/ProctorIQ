@@ -29,6 +29,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
 
         b.Entity<AppUser>().HasIndex(x => x.Email).IsUnique();
         b.Entity<AppUser>().Property(x => x.FullName).HasMaxLength(100);
+        b.Entity<AppUser>().HasQueryFilter(x => x.IsActive);
+        b.Entity<Exam>().HasQueryFilter(x => !x.IsDeleted);
 
         b.Entity<Exam>().HasMany(x => x.Questions).WithOne().HasForeignKey(x => x.ExamId);
         b.Entity<Question>().HasMany(x => x.Options).WithOne().HasForeignKey(x => x.QuestionId);
