@@ -13,6 +13,10 @@ public class ExamsController(IExamService exams) : ControllerBase
     [Authorize(Roles = "Admin,Proctor")]
     public async Task<IActionResult> List(CancellationToken ct) => Ok(await exams.ListExamsAsync(ct));
 
+    [HttpGet("available")]
+    [Authorize(Roles = "Candidate")]
+    public async Task<IActionResult> Available(CancellationToken ct) => Ok(await exams.ListAvailableExamsAsync(ct));
+
     [HttpPost]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Create(CreateExamRequest request, CancellationToken ct) =>

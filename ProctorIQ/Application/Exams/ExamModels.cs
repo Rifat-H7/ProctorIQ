@@ -26,6 +26,7 @@ public interface IExamService
 {
     Task<Guid> CreateExamAsync(CreateExamRequest request, Guid adminId, CancellationToken ct);
     Task<List<object>> ListExamsAsync(CancellationToken ct);
+    Task<List<object>> ListAvailableExamsAsync(CancellationToken ct);
     Task<Guid> AddQuestionAsync(AddQuestionRequest request, CancellationToken ct);
     Task<List<object>> GetQuestionsForCandidateAsync(Guid examId, CancellationToken ct);
     Task SoftDeleteExamAsync(Guid examId, CancellationToken ct);

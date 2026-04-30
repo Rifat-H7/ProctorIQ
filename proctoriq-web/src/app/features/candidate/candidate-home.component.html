@@ -1,0 +1,73 @@
+<section class="page">
+  <header class="topbar">
+    <h1>Candidate Dashboard</h1>
+    <button (click)="logout()">Logout</button>
+  </header>
+
+  @if (error()) { <p class="msg error">{{ error() }}</p> }
+  @if (message()) { <p class="msg success">{{ message() }}</p> }
+
+  @if (!started && !result()) {
+    <article class="card">
+      <h2>Start Exam</h2>
+      @if (loading()) {
+        <p>Loading exams...</p>
+      } @else {
+        <label>Select Exam
+          <select [(ngModel)]="selectedExamId" name="selectedExamId">
+            <option value="" disabled>Select one</option>
+            @for (exam of exams(); track exam.id) {
+              <option [value]="exam.id">{{ exam.title }} ({{ exam.status }})</option>
+            }
+          </select>
+        </label>
+        <div class="row">
+          <button (click)="startAttempt()">Start Attempt</button>
+          <button class="secondary" (click)="loadExams()">Refresh</button>
+        </div>
+      }
+    </article>
+  }
+
+  @if (started && currentQuestion; as q) {
+    <article class="card">
+      <h2>Question {{ currentIndex + 1 }} / {{ questions().length }}</h2>
+      <p class="qtext">{{ q.questionText }}</p>
+
+      <div class="options">
+        @for (opt of q.options; track opt.id) {
+          <label>
+            <input
+              type="radio"
+              [name]="q.id"
+              [checked]="answers[q.id] === opt.id"
+              (change)="selectAnswer(opt.id)" />
+            {{ opt.optionText }}
+          </label>
+        }
+      </div>
+
+      <div class="row">
+        <button class="secondary" (click)="prevQuestion()" [disabled]="currentIndex === 0">Previous</button>
+        <button class="secondary" (click)="nextQuestion()" [disabled]="currentIndex >= questions().length - 1">Next</button>
+        <button (click)="submitAttempt()" [disabled]="submitting()">{{ submitting() ? 'Submitting...' : 'Submit Attempt' }}</button>
+      </div>
+
+      @if (saving()) { <p>Saving answer...</p> }
+    </article>
+  }
+
+  @if (result(); as r) {
+    <article class="card">
+      <h2>Result</h2>
+      <p>Status: <strong>{{ r.status }}</strong></p>
+      <p>Score: <strong>{{ r.score ?? 'N/A' }}</strong></p>
+      <p>Percentage: <strong>{{ r.percentage ?? 'N/A' }}</strong></p>
+      <p>Outcome: <strong>{{ r.isPassed ? 'Passed' : 'Not Passed' }}</strong></p>
+      <div class="row">
+        <button (click)="downloadCertificate()">Download Certificate</button>
+        <button class="secondary" (click)="restartFlow()">Back to Exams</button>
+      </div>
+    </article>
+  }
+</section>

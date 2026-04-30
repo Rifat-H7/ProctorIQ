@@ -32,6 +32,15 @@ public class ExamService(AppDbContext db) : IExamService
     public async Task<List<object>> ListExamsAsync(CancellationToken ct) =>
         await db.Exams.Select(x => (object)new { x.Id, x.Title, x.Status, x.StartTimeUtc, x.EndTimeUtc }).ToListAsync(ct);
 
+    public async Task<List<object>> ListAvailableExamsAsync(CancellationToken ct)
+    {
+        var now = DateTime.UtcNow;
+        return await db.Exams
+            .Where(x => x.EndTimeUtc >= now && x.Status != ExamStatus.Draft)
+            .Select(x => (object)new { x.Id, x.Title, x.Status, x.StartTimeUtc, x.EndTimeUtc })
+            .ToListAsync(ct);
+    }
+
     public async Task<Guid> AddQuestionAsync(AddQuestionRequest request, CancellationToken ct)
     {
         var qType = request.Type.Equals("TrueFalse", StringComparison.OrdinalIgnoreCase) ? QuestionType.TrueFalse : QuestionType.Mcq;
