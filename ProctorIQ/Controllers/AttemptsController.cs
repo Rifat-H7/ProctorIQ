@@ -9,6 +9,13 @@ namespace ProctorIQ.Controllers;
 [Authorize(Roles = "Candidate")]
 public class AttemptsController(IAttemptService attempts) : ControllerBase
 {
+    [HttpGet("exam/{examId:guid}")]
+    public async Task<IActionResult> GetByExam(Guid examId, CancellationToken ct)
+    {
+        var existing = await attempts.GetAttemptForExamAsync(examId, User.UserId(), ct);
+        return existing is null ? NotFound() : Ok(existing);
+    }
+
     [HttpPost("start")]
     public async Task<IActionResult> Start(StartAttemptRequest request, CancellationToken ct) =>
         Ok(new { attemptId = await attempts.StartAttemptAsync(request, User.UserId(), ct) });

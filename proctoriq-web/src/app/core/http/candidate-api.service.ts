@@ -27,6 +27,12 @@ export interface AttemptResult {
   status: string;
 }
 
+export interface AttemptResumeResponse {
+  attemptId: string;
+  status: string;
+  answers: Record<string, string | null>;
+}
+
 @Injectable({ providedIn: 'root' })
 export class CandidateApiService {
   constructor(private readonly http: HttpClient) {}
@@ -37,6 +43,10 @@ export class CandidateApiService {
 
   startAttempt(examId: string) {
     return this.http.post<{ attemptId: string }>(`${environment.apiBaseUrl}/api/attempts/start`, { examId });
+  }
+
+  getAttemptByExam(examId: string) {
+    return this.http.get<AttemptResumeResponse>(`${environment.apiBaseUrl}/api/attempts/exam/${examId}`);
   }
 
   getQuestions(examId: string) {

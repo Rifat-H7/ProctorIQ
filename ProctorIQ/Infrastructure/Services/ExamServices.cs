@@ -123,6 +123,21 @@ public class AttemptService(AppDbContext db) : IAttemptService
         await db.SaveChangesAsync(ct);
     }
 
+    public async Task<AttemptResumeResponse?> GetAttemptForExamAsync(Guid examId, Guid candidateId, CancellationToken ct)
+    {
+        var attempt = await db.ExamAttempts
+            .Where(x => x.ExamId == examId && x.CandidateId == candidateId)
+            .OrderByDescending(x => x.StartedAtUtc)
+            .FirstOrDefaultAsync(ct);
+        if (attempt is null) return null;
+
+        var answers = await db.CandidateAnswers
+            .Where(x => x.AttemptId == attempt.Id)
+            .ToDictionaryAsync(x => x.QuestionId, x => x.SelectedOptionId, ct);
+
+        return new AttemptResumeResponse(attempt.Id, attempt.Status.ToString(), answers);
+    }
+
     public async Task<List<object>> ListActiveProctorExamsAsync(CancellationToken ct) =>
         await db.Exams
             .Where(x => x.StartTimeUtc <= DateTime.UtcNow && x.EndTimeUtc >= DateTime.UtcNow)

@@ -21,6 +21,7 @@ public record AddQuestionRequest(
 public record OptionRequest(string OptionText, bool IsCorrect);
 public record StartAttemptRequest(Guid ExamId);
 public record SaveAnswerRequest(Guid QuestionId, Guid? SelectedOptionId);
+public record AttemptResumeResponse(Guid AttemptId, string Status, Dictionary<Guid, Guid?> Answers);
 
 public interface IExamService
 {
@@ -37,6 +38,7 @@ public interface IAttemptService
     Task<Guid> StartAttemptAsync(StartAttemptRequest request, Guid candidateId, CancellationToken ct);
     Task SaveAnswerAsync(Guid attemptId, SaveAnswerRequest request, Guid candidateId, CancellationToken ct);
     Task SubmitAttemptAsync(Guid attemptId, Guid candidateId, CancellationToken ct);
+    Task<AttemptResumeResponse?> GetAttemptForExamAsync(Guid examId, Guid candidateId, CancellationToken ct);
     Task<List<object>> ListActiveProctorExamsAsync(CancellationToken ct);
     Task<object> GetExamDashboardAsync(Guid examId, CancellationToken ct);
 }
