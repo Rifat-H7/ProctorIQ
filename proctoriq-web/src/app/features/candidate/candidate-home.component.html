@@ -6,6 +6,7 @@
 
   @if (error()) { <p class="msg error">{{ error() }}</p> }
   @if (message()) { <p class="msg success">{{ message() }}</p> }
+  @if (timerSeconds() !== null) { <p class="msg timer">Time left: {{ timerSeconds() }}s</p> }
 
   @if (!started && !result()) {
     <article class="card">
@@ -50,7 +51,7 @@
       <div class="row">
         <button class="secondary" (click)="prevQuestion()" [disabled]="currentIndex === 0">Previous</button>
         <button class="secondary" (click)="nextQuestion()" [disabled]="currentIndex >= questions().length - 1">Next</button>
-        <button (click)="submitAttempt()" [disabled]="submitting()">{{ submitting() ? 'Submitting...' : 'Submit Attempt' }}</button>
+        <button (click)="submitAttempt()" [disabled]="submitting() || isTerminated()">{{ submitting() ? 'Submitting...' : 'Submit Attempt' }}</button>
       </div>
 
       @if (saving()) { <p>Saving answer...</p> }

@@ -1,8 +1,10 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../core/auth/auth.service';
-import { CandidateApiService, CandidateExamSummary, CandidateQuestion, AttemptResult } from '../../core/http/candidate-api.service';
+import { CandidateApiService, CandidateExamSummary, CandidateQuestion, AttemptResult, AttemptResumeResponse } from '../../core/http/candidate-api.service';
+import * as signalR from '@microsoft/signalr';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-candidate-home',
@@ -11,7 +13,7 @@ import { CandidateApiService, CandidateExamSummary, CandidateQuestion, AttemptRe
   templateUrl: './candidate-home.component.html',
   styleUrl: './candidate-home.component.scss'
 })
-export class CandidateHomeComponent implements OnInit {
+export class CandidateHomeComponent implements OnInit, OnDestroy {
   exams = signal<CandidateExamSummary[]>([]);
   questions = signal<CandidateQuestion[]>([]);
   result = signal<AttemptResult | null>(null);
@@ -21,12 +23,17 @@ export class CandidateHomeComponent implements OnInit {
   submitting = signal(false);
   message = signal<string | null>(null);
   error = signal<string | null>(null);
+  timerSeconds = signal<number | null>(null);
+  isTerminated = signal(false);
 
   selectedExamId = '';
   attemptId: string | null = null;
   started = false;
   currentIndex = 0;
   answers: Record<string, string | null> = {};
+
+  private hub: signalR.HubConnection | null = null;
+  private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
 
   constructor(
     private readonly auth: AuthService,
@@ -35,6 +42,10 @@ export class CandidateHomeComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadExams();
+  }
+
+  ngOnDestroy(): void {
+    this.stopRealtime();
   }
 
   loadExams() {
@@ -63,28 +74,44 @@ export class CandidateHomeComponent implements OnInit {
     this.error.set(null);
     this.message.set(null);
     this.result.set(null);
+    this.isTerminated.set(false);
 
     this.api.startAttempt(this.selectedExamId).subscribe({
-      next: ({ attemptId }) => {
-        this.attemptId = attemptId;
-        this.api.getQuestions(this.selectedExamId).subscribe({
-          next: (questions) => {
-            this.questions.set(questions);
-            this.answers = {};
-            for (const q of questions) this.answers[q.id] = null;
-            this.currentIndex = 0;
-            this.started = true;
-            this.loading.set(false);
-            this.message.set('Attempt started. Your answers are saved question-by-question.');
-          },
+      next: ({ attemptId }) => this.loadAttemptSession({ attemptId, status: 'InProgress', answers: {} }, false),
+      error: () => {
+        // Resume existing attempt instead of hard failing when it already exists.
+        this.api.getAttemptByExam(this.selectedExamId).subscribe({
+          next: (resume) => this.loadAttemptSession(resume, true),
           error: () => {
-            this.error.set('Attempt started, but questions could not be loaded.');
+            this.error.set('Could not start or resume attempt.');
             this.loading.set(false);
           }
         });
+      }
+    });
+  }
+
+  private loadAttemptSession(resume: AttemptResumeResponse, resumed: boolean) {
+    this.attemptId = resume.attemptId;
+    this.api.getQuestions(this.selectedExamId).subscribe({
+      next: (questions) => {
+        this.questions.set(questions);
+        this.answers = {};
+        for (const q of questions) this.answers[q.id] = null;
+
+        for (const [questionId, selectedOptionId] of Object.entries(resume.answers ?? {})) {
+          this.answers[questionId] = selectedOptionId;
+        }
+
+        const firstUnanswered = questions.findIndex((q) => !this.answers[q.id]);
+        this.currentIndex = firstUnanswered >= 0 ? firstUnanswered : 0;
+        this.started = true;
+        this.loading.set(false);
+        this.message.set(resumed ? 'Existing attempt resumed.' : 'Attempt started.');
+        this.connectRealtime();
       },
       error: () => {
-        this.error.set('Could not start attempt (you may already have one for this exam).');
+        this.error.set('Attempt ready, but questions could not be loaded.');
         this.loading.set(false);
       }
     });
@@ -97,7 +124,7 @@ export class CandidateHomeComponent implements OnInit {
 
   selectAnswer(optionId: string) {
     const q = this.currentQuestion;
-    if (!q || !this.attemptId) return;
+    if (!q || !this.attemptId || this.isTerminated()) return;
 
     this.answers[q.id] = optionId;
     this.saving.set(true);
@@ -122,7 +149,7 @@ export class CandidateHomeComponent implements OnInit {
   }
 
   submitAttempt() {
-    if (!this.attemptId) return;
+    if (!this.attemptId || this.isTerminated()) return;
     this.submitting.set(true);
     this.error.set(null);
     this.message.set(null);
@@ -136,6 +163,7 @@ export class CandidateHomeComponent implements OnInit {
             this.started = false;
             this.questions.set([]);
             this.message.set('Attempt submitted successfully.');
+            this.stopRealtime();
           },
           error: () => {
             this.submitting.set(false);
@@ -173,18 +201,82 @@ export class CandidateHomeComponent implements OnInit {
   }
 
   restartFlow() {
+    this.stopRealtime();
     this.started = false;
     this.questions.set([]);
     this.currentIndex = 0;
     this.answers = {};
     this.result.set(null);
     this.attemptId = null;
+    this.timerSeconds.set(null);
     this.message.set(null);
     this.error.set(null);
+    this.isTerminated.set(false);
     this.loadExams();
   }
 
+  private async connectRealtime() {
+    if (!this.attemptId || !this.selectedExamId) return;
+
+    this.stopRealtime();
+    const token = this.auth.accessToken();
+    if (!token) return;
+
+    this.hub = new signalR.HubConnectionBuilder()
+      .withUrl(`${environment.apiBaseUrl}/hubs/exam`, { accessTokenFactory: () => token })
+      .withAutomaticReconnect()
+      .build();
+
+    this.hub.on('TimerTick', (_examId: string, seconds: number) => {
+      this.timerSeconds.set(seconds);
+    });
+
+    this.hub.on('ProctorWarning', (message: string) => {
+      this.error.set(`Proctor warning: ${message}`);
+    });
+
+    this.hub.on('TerminateSession', (reason: string) => {
+      this.error.set(`Session terminated: ${reason}`);
+      this.isTerminated.set(true);
+      this.started = false;
+      this.stopHeartbeat();
+    });
+
+    try {
+      await this.hub.start();
+      await this.hub.invoke('JoinAttempt', this.attemptId);
+      this.startHeartbeat();
+    } catch {
+      this.error.set('Realtime channel could not be connected.');
+    }
+  }
+
+  private startHeartbeat() {
+    if (!this.hub || !this.attemptId) return;
+    this.stopHeartbeat();
+    this.heartbeatTimer = setInterval(() => {
+      this.hub?.invoke('CandidateHeartbeat', this.attemptId).catch(() => undefined);
+    }, 15000);
+  }
+
+  private stopHeartbeat() {
+    if (this.heartbeatTimer) {
+      clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = null;
+    }
+  }
+
+  private stopRealtime() {
+    this.stopHeartbeat();
+    const hub = this.hub;
+    this.hub = null;
+    if (hub) {
+      hub.stop().catch(() => undefined);
+    }
+  }
+
   logout() {
+    this.stopRealtime();
     this.auth.logout();
   }
 }
