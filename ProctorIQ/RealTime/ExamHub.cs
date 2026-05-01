@@ -10,6 +10,12 @@ namespace ProctorIQ.RealTime;
 public class ExamHub(AppDbContext db) : Hub
 {
     private const int SuspiciousTabSwitchThreshold = 3;
+    private static readonly HashSet<string> SuspiciousLockdownSignals = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "ForbiddenShortcut",
+        "FullscreenExit",
+        "DevToolsAttempt"
+    };
 
     public Task JoinExam(Guid examId, string role) =>
         Groups.AddToGroupAsync(Context.ConnectionId, $"{examId}:{role}");
@@ -42,7 +48,8 @@ public class ExamHub(AppDbContext db) : Hub
 
     public async Task TabSwitchDetected(Guid attemptId, int switchCount)
     {
-        var attempt = await db.ExamAttempts.FirstOrDefaultAsync(x => x.Id == attemptId);
+        var userId = GetUserId();
+        var attempt = await db.ExamAttempts.FirstOrDefaultAsync(x => x.Id == attemptId && x.CandidateId == userId);
         if (attempt is null) return;
         attempt.TabSwitchCount = switchCount;
         attempt.LastSeenAtUtc = DateTime.UtcNow;
@@ -62,6 +69,42 @@ public class ExamHub(AppDbContext db) : Hub
         if (attempt.SessionStatus == Domain.AttemptSessionStatus.Suspicious)
         {
             await Clients.Group($"{attempt.ExamId}:Proctor").SendAsync("CandidateStatusUpdated", attempt.CandidateId, attempt.SessionStatus.ToString(), attempt.LastSeenAtUtc);
+        }
+    }
+
+    [Authorize(Roles = "Candidate")]
+    public async Task LockdownSignal(Guid attemptId, string signalType, string? detail)
+    {
+        var userId = GetUserId();
+        var attempt = await db.ExamAttempts.FirstOrDefaultAsync(x => x.Id == attemptId && x.CandidateId == userId);
+        if (attempt is null || attempt.Status != Domain.AttemptStatus.InProgress) return;
+
+        attempt.LastSeenAtUtc = DateTime.UtcNow;
+        var atUtc = attempt.LastSeenAtUtc.Value;
+        var normalizedSignalType = string.IsNullOrWhiteSpace(signalType) ? "Unknown" : signalType.Trim();
+        var safeDetail = string.IsNullOrWhiteSpace(detail) ? string.Empty : detail.Trim();
+        var isSuspicious = SuspiciousLockdownSignals.Contains(normalizedSignalType);
+        if (isSuspicious)
+        {
+            attempt.SessionStatus = Domain.AttemptSessionStatus.Suspicious;
+        }
+
+        db.ProctorLogs.Add(new Domain.ProctorLog
+        {
+            AttemptId = attempt.Id,
+            ProctorId = Guid.Empty,
+            EventType = "LockdownSignal",
+            EventDetail = $"{{\"signalType\":\"{normalizedSignalType}\",\"detail\":\"{safeDetail.Replace("\"", "'")}\"}}"
+        });
+        await db.SaveChangesAsync();
+
+        await Clients.Group($"{attempt.ExamId}:Proctor")
+            .SendAsync("LockdownSignalDetected", attempt.CandidateId, attempt.Id, normalizedSignalType, safeDetail, atUtc, attempt.SessionStatus.ToString());
+
+        if (isSuspicious)
+        {
+            await Clients.Group($"{attempt.ExamId}:Proctor")
+                .SendAsync("CandidateStatusUpdated", attempt.CandidateId, attempt.SessionStatus.ToString(), atUtc);
         }
     }
 
