@@ -1,1 +1,97 @@
-/* You can add global styles to this file, and also import other style files */
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+
+:root {
+  --bg-1: #f4f8f7;
+  --bg-2: #edf3ff;
+  --surface: #ffffff;
+  --surface-2: #f7fbff;
+  --text: #112031;
+  --muted: #516176;
+  --border: #d2dce9;
+  --primary: #1456d9;
+  --primary-strong: #0e45b2;
+  --accent: #0aa48a;
+  --danger: #c9353b;
+  --warn: #b15f00;
+  --radius: 16px;
+  --shadow: 0 10px 30px rgba(17, 32, 49, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  font-family: 'IBM Plex Sans', 'Segoe UI', sans-serif;
+  color: var(--text);
+  background:
+    radial-gradient(circle at 10% 10%, rgba(20, 86, 217, 0.12), transparent 32%),
+    radial-gradient(circle at 90% 0%, rgba(10, 164, 138, 0.14), transparent 26%),
+    linear-gradient(160deg, var(--bg-1), var(--bg-2));
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  font-family: 'Space Grotesk', 'Segoe UI', sans-serif;
+  letter-spacing: -0.02em;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  border: 1px solid transparent;
+  border-radius: 12px;
+  padding: 10px 14px;
+  background: var(--primary);
+  color: #fff;
+  cursor: pointer;
+  transition: transform 120ms ease, background 120ms ease;
+}
+
+button:hover:not(:disabled) {
+  background: var(--primary-strong);
+  transform: translateY(-1px);
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+input,
+select,
+textarea {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--text);
+  padding: 10px 12px;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: 2px solid rgba(20, 86, 217, 0.2);
+  border-color: var(--primary);
+}
+
+code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.82rem;
+  background: #eef3fb;
+  padding: 2px 6px;
+  border-radius: 8px;
+}

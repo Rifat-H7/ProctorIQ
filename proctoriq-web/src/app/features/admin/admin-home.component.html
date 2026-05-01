@@ -1,7 +1,10 @@
 <section class="page">
   <header class="topbar">
-    <h1>Admin Dashboard</h1>
-    <button (click)="logout()">Logout</button>
+    <div>
+      <p class="eyebrow">Admin Console</p>
+      <h1>Exam Builder</h1>
+    </div>
+    <button class="ghost" (click)="logout()">Logout</button>
   </header>
 
   @if (error()) { <p class="msg error">{{ error() }}</p> }
@@ -12,28 +15,34 @@
       <h2>Create Exam</h2>
       <form (ngSubmit)="createExam()" class="stack">
         <label>Title <input [(ngModel)]="createModel.title" name="title" required /></label>
-        <label>Duration (minutes) <input [(ngModel)]="createModel.durationMinutes" name="durationMinutes" type="number" min="1" required /></label>
+        <div class="row two">
+          <label>Duration (minutes) <input [(ngModel)]="createModel.durationMinutes" name="durationMinutes" type="number" min="1" required /></label>
+          <label>Total Marks <input [(ngModel)]="createModel.totalMarks" name="totalMarks" type="number" min="1" required /></label>
+        </div>
+        <div class="row two">
+          <label>Pass Marks <input [(ngModel)]="createModel.passMarks" name="passMarks" type="number" min="0" required /></label>
+          <label class="inline"><input [(ngModel)]="createModel.isRandomised" name="isRandomised" type="checkbox" /> Randomize Questions</label>
+        </div>
         <label>Start (local) <input [(ngModel)]="createModel.startLocal" name="startLocal" type="datetime-local" required /></label>
         <label>End (local) <input [(ngModel)]="createModel.endLocal" name="endLocal" type="datetime-local" required /></label>
-        <label>Total Marks <input [(ngModel)]="createModel.totalMarks" name="totalMarks" type="number" min="1" required /></label>
-        <label>Pass Marks <input [(ngModel)]="createModel.passMarks" name="passMarks" type="number" min="0" required /></label>
-        <label class="inline"><input [(ngModel)]="createModel.isRandomised" name="isRandomised" type="checkbox" /> Randomised questions</label>
         <button type="submit">Create Exam</button>
       </form>
     </article>
 
     <article class="card">
-      <h2>Exams</h2>
-      <button (click)="loadExams()">Refresh</button>
+      <div class="card-head">
+        <h2>Existing Exams</h2>
+        <button class="ghost" (click)="loadExams()">Refresh</button>
+      </div>
       @if (loading()) {
         <p>Loading exams...</p>
       } @else {
-        <ul>
+        <ul class="exam-list">
           @for (exam of exams(); track exam.id) {
             <li>
               <label>
                 <input type="radio" name="selectedExam" [value]="exam.id" [(ngModel)]="selectedExamId" />
-                <strong>{{ exam.title }}</strong> · {{ exam.status }}
+                <span><strong>{{ exam.title }}</strong> <em>{{ exam.status }}</em></span>
               </label>
             </li>
           }
@@ -43,11 +52,11 @@
   </div>
 
   <article class="card">
-    <h2>Add Question to Selected Exam</h2>
-    <p>Selected Exam ID: <code>{{ selectedExamId || 'none' }}</code></p>
+    <h2>Question Composer</h2>
+    <p class="selected">Selected Exam: <code>{{ selectedExamId || 'none' }}</code></p>
     <form (ngSubmit)="addQuestion()" class="stack">
       <label>Question Text <textarea [(ngModel)]="questionModel.questionText" name="questionText" rows="3" required></textarea></label>
-      <div class="row">
+      <div class="row four">
         <label>Type
           <select [(ngModel)]="questionModel.type" name="type">
             <option value="Mcq">MCQ</option>
@@ -59,10 +68,14 @@
         <label>Topic <input [(ngModel)]="questionModel.topic" name="topic" required /></label>
       </div>
 
-      <label>Option A <input [(ngModel)]="questionModel.optionA" name="optionA" /></label>
-      <label>Option B <input [(ngModel)]="questionModel.optionB" name="optionB" /></label>
-      <label>Option C <input [(ngModel)]="questionModel.optionC" name="optionC" /></label>
-      <label>Option D <input [(ngModel)]="questionModel.optionD" name="optionD" /></label>
+      <div class="row two">
+        <label>Option A <input [(ngModel)]="questionModel.optionA" name="optionA" /></label>
+        <label>Option B <input [(ngModel)]="questionModel.optionB" name="optionB" /></label>
+      </div>
+      <div class="row two">
+        <label>Option C <input [(ngModel)]="questionModel.optionC" name="optionC" /></label>
+        <label>Option D <input [(ngModel)]="questionModel.optionD" name="optionD" /></label>
+      </div>
 
       <label>Correct Option
         <select [(ngModel)]="questionModel.correctKey" name="correctKey">

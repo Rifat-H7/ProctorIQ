@@ -1,7 +1,10 @@
 <section class="page">
   <header class="topbar">
-    <h1>Proctor Dashboard</h1>
-    <button (click)="logout()">Logout</button>
+    <div>
+      <p class="eyebrow">Proctor Console</p>
+      <h1>Live Monitoring Center</h1>
+    </div>
+    <button class="ghost" (click)="logout()">Logout</button>
   </header>
 
   @if (error()) { <p class="msg error">{{ error() }}</p> }
@@ -18,8 +21,8 @@
     </label>
     <div class="row">
       <button (click)="loadDashboard()">Open Dashboard</button>
-      <button class="secondary" (click)="loadActiveExams()">Refresh Exams</button>
-      <button class="secondary" (click)="exportEvidence()" [disabled]="!selectedExamId || exportingEvidence">
+      <button class="ghost" (click)="loadActiveExams()">Refresh Exams</button>
+      <button class="ghost" (click)="exportEvidence()" [disabled]="!selectedExamId || exportingEvidence">
         {{ exportingEvidence ? 'Exporting...' : 'Export Evidence (CSV)' }}
       </button>
     </div>
@@ -33,7 +36,7 @@
 
   @if (dashboard(); as d) {
     <article class="card summary">
-      <h2>Summary</h2>
+      <h2>Session Summary</h2>
       <div class="stats">
         <span>Total: {{ d.summary.totalAttempts }}</span>
         <span>Connected: {{ d.summary.connected }}</span>
@@ -83,7 +86,7 @@
                 <td>{{ a.warningCount }}</td>
                 <td>{{ a.lastSeenAtUtc || '-' }}</td>
                 <td class="actions">
-                  <button class="secondary" (click)="sendWarning(a)">Warn</button>
+                  <button class="ghost" (click)="sendWarning(a)">Warn</button>
                   <button (click)="terminate(a)">Terminate</button>
                 </td>
               </tr>

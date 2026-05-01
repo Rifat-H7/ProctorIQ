@@ -1,12 +1,15 @@
 <section class="page">
   <header class="topbar">
-    <h1>Candidate Dashboard</h1>
-    <button (click)="logout()">Logout</button>
+    <div>
+      <p class="eyebrow">Candidate Console</p>
+      <h1>Exam Workspace</h1>
+    </div>
+    <button class="ghost" (click)="logout()">Logout</button>
   </header>
 
   @if (error()) { <p class="msg error">{{ error() }}</p> }
   @if (message()) { <p class="msg success">{{ message() }}</p> }
-  @if (timerSeconds() !== null) { <p class="msg timer">Time left: {{ timerSeconds() }}s</p> }
+  @if (timerSeconds() !== null) { <p class="msg timer">Time Left: {{ timerSeconds() }}s</p> }
 
   @if (!started && !result()) {
     <article class="card">
@@ -24,7 +27,7 @@
         </label>
         <div class="row">
           <button (click)="startAttempt()">Start Attempt</button>
-          <button class="secondary" (click)="loadExams()">Refresh</button>
+          <button class="ghost" (click)="loadExams()">Refresh</button>
         </div>
       }
     </article>
@@ -32,13 +35,16 @@
 
   @if (started && currentQuestion; as q) {
     <article class="card">
-      <h2>Question {{ currentIndex + 1 }} / {{ questions().length }}</h2>
-      <p class="lockdown-note">Lockdown monitoring is active. Copy/paste, right click, and fullscreen exits are logged.</p>
+      <div class="question-head">
+        <h2>Question {{ currentIndex + 1 }} / {{ questions().length }}</h2>
+        <span class="monitor-badge">Lockdown Active</span>
+      </div>
+      <p class="lockdown-note">Copy/paste, right-click, shortcuts, and fullscreen exits are monitored and logged.</p>
       <p class="qtext">{{ q.questionText }}</p>
 
       <div class="options">
         @for (opt of q.options; track opt.id) {
-          <label>
+          <label class="option-row">
             <input
               type="radio"
               [name]="q.id"
@@ -50,8 +56,8 @@
       </div>
 
       <div class="row">
-        <button class="secondary" (click)="prevQuestion()" [disabled]="currentIndex === 0">Previous</button>
-        <button class="secondary" (click)="nextQuestion()" [disabled]="currentIndex >= questions().length - 1">Next</button>
+        <button class="ghost" (click)="prevQuestion()" [disabled]="currentIndex === 0">Previous</button>
+        <button class="ghost" (click)="nextQuestion()" [disabled]="currentIndex >= questions().length - 1">Next</button>
         <button (click)="submitAttempt()" [disabled]="submitting() || isTerminated()">{{ submitting() ? 'Submitting...' : 'Submit Attempt' }}</button>
       </div>
 
@@ -60,15 +66,15 @@
   }
 
   @if (result(); as r) {
-    <article class="card">
-      <h2>Result</h2>
+    <article class="card result">
+      <h2>Result Summary</h2>
       <p>Status: <strong>{{ r.status }}</strong></p>
       <p>Score: <strong>{{ r.score ?? 'N/A' }}</strong></p>
       <p>Percentage: <strong>{{ r.percentage ?? 'N/A' }}</strong></p>
       <p>Outcome: <strong>{{ r.isPassed ? 'Passed' : 'Not Passed' }}</strong></p>
       <div class="row">
         <button (click)="downloadCertificate()">Download Certificate</button>
-        <button class="secondary" (click)="restartFlow()">Back to Exams</button>
+        <button class="ghost" (click)="restartFlow()">Back to Exams</button>
       </div>
     </article>
   }
