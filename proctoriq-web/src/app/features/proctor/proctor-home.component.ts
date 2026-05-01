@@ -35,6 +35,13 @@ export class ProctorHomeComponent implements OnInit, OnDestroy {
     return attempts.filter((a) => a.sessionStatus === this.statusFilter || a.status === this.statusFilter);
   });
 
+  incidentSeverity(incident: ProctorIncident): 'Info' | 'Warning' | 'Critical' {
+    if (incident.severity) return incident.severity;
+    if (incident.eventType === 'Terminated') return 'Critical';
+    if (incident.eventType === 'Warning' || incident.eventType === 'LockdownSignal') return 'Warning';
+    return 'Info';
+  }
+
   rowClass(a: ProctorAttempt): string {
     if (a.status === 'Terminated') return 'row-critical';
     if (a.sessionStatus === 'Suspicious') return 'row-warning';
@@ -139,10 +146,12 @@ export class ProctorHomeComponent implements OnInit, OnDestroy {
       this.patchCandidateStatus(candidateId, sessionStatus, atUtc);
       this.pushIncident({
         attemptId: this.findAttemptIdByCandidate(candidateId),
+        candidateId,
         proctorId: '',
         eventType: 'CandidateStatusUpdated',
         eventDetail: sessionStatus,
-        loggedAtUtc: atUtc
+        loggedAtUtc: atUtc,
+        severity: sessionStatus === 'Suspicious' ? 'Warning' : 'Info'
       });
     });
 
@@ -150,10 +159,32 @@ export class ProctorHomeComponent implements OnInit, OnDestroy {
       this.patchTabSwitch(candidateId, switchCount, atUtc);
       this.pushIncident({
         attemptId: this.findAttemptIdByCandidate(candidateId),
+        candidateId,
         proctorId: '',
         eventType: 'TabSwitch',
         eventDetail: `switchCount=${switchCount}`,
-        loggedAtUtc: atUtc
+        loggedAtUtc: atUtc,
+        severity: switchCount >= 3 ? 'Warning' : 'Info'
+      });
+    });
+
+    this.hub.on('LockdownSignalDetected', (
+      candidateId: string,
+      attemptId: string,
+      signalType: string,
+      detail: string,
+      atUtc: string,
+      sessionStatus: string
+    ) => {
+      this.patchCandidateStatus(candidateId, sessionStatus, atUtc);
+      this.pushIncident({
+        attemptId,
+        candidateId,
+        proctorId: '',
+        eventType: 'LockdownSignal',
+        eventDetail: `${signalType}${detail ? `: ${detail}` : ''}`,
+        loggedAtUtc: atUtc,
+        severity: signalType === 'FullscreenExit' || signalType === 'ForbiddenShortcut' ? 'Warning' : 'Info'
       });
     });
 

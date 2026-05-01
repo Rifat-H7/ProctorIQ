@@ -166,7 +166,19 @@ public class AttemptService(AppDbContext db) : IAttemptService
             .Where(x => db.ExamAttempts.Any(a => a.Id == x.AttemptId && a.ExamId == examId))
             .OrderByDescending(x => x.LoggedAtUtc)
             .Take(50)
-            .Select(x => new { x.AttemptId, x.ProctorId, x.EventType, x.EventDetail, x.LoggedAtUtc })
+            .Join(
+                db.ExamAttempts,
+                log => log.AttemptId,
+                attempt => attempt.Id,
+                (log, attempt) => new
+                {
+                    log.AttemptId,
+                    attempt.CandidateId,
+                    log.ProctorId,
+                    log.EventType,
+                    log.EventDetail,
+                    log.LoggedAtUtc
+                })
             .ToListAsync(ct);
 
         return new

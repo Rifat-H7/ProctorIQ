@@ -36,10 +36,15 @@ export class CandidateHomeComponent implements OnInit, OnDestroy {
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
   private tabSwitchCount = 0;
   private lastTabSignalAt = 0;
+  private lastLockdownSignalAt: Record<string, number> = {};
   private readonly visibilityHandler = () => {
     if (document.visibilityState === 'hidden') this.notifyTabSwitch();
   };
   private readonly blurHandler = () => this.notifyTabSwitch();
+  private readonly keydownHandler = (event: KeyboardEvent) => this.onKeydown(event);
+  private readonly clipboardHandler = (event: ClipboardEvent) => this.onClipboardAction(event);
+  private readonly contextMenuHandler = (event: MouseEvent) => this.onContextMenu(event);
+  private readonly fullscreenHandler = () => this.onFullscreenChanged();
 
   constructor(
     private readonly auth: AuthService,
@@ -254,22 +259,44 @@ export class CandidateHomeComponent implements OnInit, OnDestroy {
       await this.hub.invoke('JoinAttempt', this.attemptId);
       this.startHeartbeat();
       this.startProctoringSignals();
+      this.tryEnterFullscreen();
     } catch {
       this.error.set('Realtime channel could not be connected.');
     }
+  }
+
+  private tryEnterFullscreen() {
+    const root = document.documentElement;
+    if (document.fullscreenElement || !root.requestFullscreen) return;
+    root.requestFullscreen().catch(() => {
+      this.notifyLockdownSignal('FullscreenExit', 'Fullscreen entry rejected by browser/user');
+    });
   }
 
   private startProctoringSignals() {
     this.stopProctoringSignals();
     this.tabSwitchCount = 0;
     this.lastTabSignalAt = 0;
+    this.lastLockdownSignalAt = {};
     document.addEventListener('visibilitychange', this.visibilityHandler);
     window.addEventListener('blur', this.blurHandler);
+    window.addEventListener('keydown', this.keydownHandler);
+    window.addEventListener('copy', this.clipboardHandler);
+    window.addEventListener('cut', this.clipboardHandler);
+    window.addEventListener('paste', this.clipboardHandler);
+    window.addEventListener('contextmenu', this.contextMenuHandler);
+    document.addEventListener('fullscreenchange', this.fullscreenHandler);
   }
 
   private stopProctoringSignals() {
     document.removeEventListener('visibilitychange', this.visibilityHandler);
     window.removeEventListener('blur', this.blurHandler);
+    window.removeEventListener('keydown', this.keydownHandler);
+    window.removeEventListener('copy', this.clipboardHandler);
+    window.removeEventListener('cut', this.clipboardHandler);
+    window.removeEventListener('paste', this.clipboardHandler);
+    window.removeEventListener('contextmenu', this.contextMenuHandler);
+    document.removeEventListener('fullscreenchange', this.fullscreenHandler);
   }
 
   private notifyTabSwitch() {
@@ -281,6 +308,55 @@ export class CandidateHomeComponent implements OnInit, OnDestroy {
     this.lastTabSignalAt = now;
     this.tabSwitchCount += 1;
     this.hub.invoke('TabSwitchDetected', this.attemptId, this.tabSwitchCount).catch(() => undefined);
+  }
+
+  private onKeydown(event: KeyboardEvent) {
+    if (!this.started || this.isTerminated()) return;
+
+    const key = event.key.toLowerCase();
+    const ctrlOrMeta = event.ctrlKey || event.metaKey;
+    const forbiddenShortcut = ctrlOrMeta && ['c', 'v', 'x', 'p', 's', 'a'].includes(key);
+    const devToolsAttempt = key === 'f12' || (ctrlOrMeta && event.shiftKey && ['i', 'j', 'c'].includes(key));
+
+    if (forbiddenShortcut) {
+      event.preventDefault();
+      this.notifyLockdownSignal('ForbiddenShortcut', `${ctrlOrMeta ? 'Ctrl/Cmd' : ''}+${key.toUpperCase()}`);
+      return;
+    }
+
+    if (devToolsAttempt) {
+      this.notifyLockdownSignal('DevToolsAttempt', event.key);
+    }
+  }
+
+  private onClipboardAction(event: ClipboardEvent) {
+    if (!this.started || this.isTerminated()) return;
+    event.preventDefault();
+    this.notifyLockdownSignal('ClipboardAction', event.type);
+  }
+
+  private onContextMenu(event: MouseEvent) {
+    if (!this.started || this.isTerminated()) return;
+    event.preventDefault();
+    this.notifyLockdownSignal('ContextMenu', 'Right click disabled');
+  }
+
+  private onFullscreenChanged() {
+    if (!this.started || this.isTerminated()) return;
+    if (!document.fullscreenElement) {
+      this.notifyLockdownSignal('FullscreenExit', 'Candidate left fullscreen mode');
+    }
+  }
+
+  private notifyLockdownSignal(signalType: string, detail: string) {
+    if (!this.hub || !this.attemptId) return;
+
+    const now = Date.now();
+    const last = this.lastLockdownSignalAt[signalType] ?? 0;
+    if (now - last < 1500) return;
+
+    this.lastLockdownSignalAt[signalType] = now;
+    this.hub.invoke('LockdownSignal', this.attemptId, signalType, detail).catch(() => undefined);
   }
 
   private startHeartbeat() {
