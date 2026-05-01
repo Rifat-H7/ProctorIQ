@@ -34,6 +34,12 @@ export class CandidateHomeComponent implements OnInit, OnDestroy {
 
   private hub: signalR.HubConnection | null = null;
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+  private tabSwitchCount = 0;
+  private lastTabSignalAt = 0;
+  private readonly visibilityHandler = () => {
+    if (document.visibilityState === 'hidden') this.notifyTabSwitch();
+  };
+  private readonly blurHandler = () => this.notifyTabSwitch();
 
   constructor(
     private readonly auth: AuthService,
@@ -240,15 +246,41 @@ export class CandidateHomeComponent implements OnInit, OnDestroy {
       this.isTerminated.set(true);
       this.started = false;
       this.stopHeartbeat();
+      this.stopProctoringSignals();
     });
 
     try {
       await this.hub.start();
       await this.hub.invoke('JoinAttempt', this.attemptId);
       this.startHeartbeat();
+      this.startProctoringSignals();
     } catch {
       this.error.set('Realtime channel could not be connected.');
     }
+  }
+
+  private startProctoringSignals() {
+    this.stopProctoringSignals();
+    this.tabSwitchCount = 0;
+    this.lastTabSignalAt = 0;
+    document.addEventListener('visibilitychange', this.visibilityHandler);
+    window.addEventListener('blur', this.blurHandler);
+  }
+
+  private stopProctoringSignals() {
+    document.removeEventListener('visibilitychange', this.visibilityHandler);
+    window.removeEventListener('blur', this.blurHandler);
+  }
+
+  private notifyTabSwitch() {
+    if (!this.hub || !this.attemptId || !this.started || this.isTerminated()) return;
+
+    const now = Date.now();
+    if (now - this.lastTabSignalAt < 1000) return;
+
+    this.lastTabSignalAt = now;
+    this.tabSwitchCount += 1;
+    this.hub.invoke('TabSwitchDetected', this.attemptId, this.tabSwitchCount).catch(() => undefined);
   }
 
   private startHeartbeat() {
@@ -268,6 +300,7 @@ export class CandidateHomeComponent implements OnInit, OnDestroy {
 
   private stopRealtime() {
     this.stopHeartbeat();
+    this.stopProctoringSignals();
     const hub = this.hub;
     this.hub = null;
     if (hub) {
