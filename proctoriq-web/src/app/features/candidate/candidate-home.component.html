@@ -33,6 +33,7 @@
   @if (started && currentQuestion; as q) {
     <article class="card">
       <h2>Question {{ currentIndex + 1 }} / {{ questions().length }}</h2>
+      <p class="lockdown-note">Lockdown monitoring is active. Copy/paste, right click, and fullscreen exits are logged.</p>
       <p class="qtext">{{ q.questionText }}</p>
 
       <div class="options">
