@@ -16,4 +16,13 @@ public class ProctorController(IAttemptService attempts) : ControllerBase
     [HttpGet("exams/{examId:guid}/dashboard")]
     public async Task<IActionResult> Dashboard(Guid examId, CancellationToken ct) =>
         Ok(await attempts.GetExamDashboardAsync(examId, ct));
+
+    [HttpGet("exams/{examId:guid}/evidence.csv")]
+    public async Task<IActionResult> ExportEvidence(Guid examId, CancellationToken ct)
+    {
+        var csv = await attempts.ExportEvidenceCsvAsync(examId, ct);
+        var bytes = System.Text.Encoding.UTF8.GetBytes(csv);
+        var fileName = $"evidence-{examId}-{DateTime.UtcNow:yyyyMMddHHmmss}.csv";
+        return File(bytes, "text/csv", fileName);
+    }
 }

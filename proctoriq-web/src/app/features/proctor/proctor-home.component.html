@@ -19,6 +19,9 @@
     <div class="row">
       <button (click)="loadDashboard()">Open Dashboard</button>
       <button class="secondary" (click)="loadActiveExams()">Refresh Exams</button>
+      <button class="secondary" (click)="exportEvidence()" [disabled]="!selectedExamId || exportingEvidence">
+        {{ exportingEvidence ? 'Exporting...' : 'Export Evidence (CSV)' }}
+      </button>
     </div>
     <label>Warning Message
       <input [(ngModel)]="warningMessage" name="warningMessage" />

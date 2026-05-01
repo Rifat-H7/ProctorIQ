@@ -26,6 +26,7 @@ export class ProctorHomeComponent implements OnInit, OnDestroy {
   statusFilter = 'All';
   warningMessage = 'Please focus and avoid switching tabs.';
   terminateReason = 'Exam session terminated by proctor.';
+  exportingEvidence = false;
 
   private hub: signalR.HubConnection | null = null;
 
@@ -129,6 +130,42 @@ export class ProctorHomeComponent implements OnInit, OnDestroy {
     } catch {
       this.error.set('Failed to terminate session.');
     }
+  }
+
+  exportEvidence() {
+    if (!this.selectedExamId || this.exportingEvidence) return;
+    this.exportingEvidence = true;
+    this.error.set(null);
+    this.info.set(null);
+
+    this.api.exportEvidenceCsv(this.selectedExamId).subscribe({
+      next: (res) => {
+        const blob = res.body;
+        if (!blob) {
+          this.error.set('Evidence export returned empty data.');
+          this.exportingEvidence = false;
+          return;
+        }
+
+        const disposition = res.headers.get('content-disposition') ?? '';
+        const match = disposition.match(/filename="?([^"]+)"?/i);
+        const fileName = match?.[1] ?? `evidence-${this.selectedExamId}.csv`;
+
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        a.click();
+        window.URL.revokeObjectURL(url);
+
+        this.info.set('Evidence CSV downloaded.');
+        this.exportingEvidence = false;
+      },
+      error: () => {
+        this.error.set('Could not export evidence CSV.');
+        this.exportingEvidence = false;
+      }
+    });
   }
 
   private connectHub() {

@@ -41,4 +41,5 @@ public interface IAttemptService
     Task<AttemptResumeResponse?> GetAttemptForExamAsync(Guid examId, Guid candidateId, CancellationToken ct);
     Task<List<object>> ListActiveProctorExamsAsync(CancellationToken ct);
     Task<object> GetExamDashboardAsync(Guid examId, CancellationToken ct);
+    Task<string> ExportEvidenceCsvAsync(Guid examId, CancellationToken ct);
 }

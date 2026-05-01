@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpResponse } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
+import { Observable } from 'rxjs';
 
 export interface ProctorActiveExam {
   id: string;
@@ -57,5 +58,12 @@ export class ProctorApiService {
 
   getDashboard(examId: string) {
     return this.http.get<ProctorDashboard>(`${environment.apiBaseUrl}/api/proctor/exams/${examId}/dashboard`);
+  }
+
+  exportEvidenceCsv(examId: string): Observable<HttpResponse<Blob>> {
+    return this.http.get(`${environment.apiBaseUrl}/api/proctor/exams/${examId}/evidence.csv`, {
+      responseType: 'blob',
+      observe: 'response'
+    }) as Observable<HttpResponse<Blob>>;
   }
 }

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using System.Text;
 using ProctorIQ.Application.Exams;
 using ProctorIQ.Application.Results;
 using ProctorIQ.Domain;
@@ -197,6 +198,51 @@ public class AttemptService(AppDbContext db) : IAttemptService
             Attempts = attempts,
             RecentIncidents = recentLogs
         };
+    }
+
+    public async Task<string> ExportEvidenceCsvAsync(Guid examId, CancellationToken ct)
+    {
+        var rows = await db.ProctorLogs
+            .Where(x => db.ExamAttempts.Any(a => a.Id == x.AttemptId && a.ExamId == examId))
+            .OrderBy(x => x.LoggedAtUtc)
+            .Join(
+                db.ExamAttempts,
+                log => log.AttemptId,
+                attempt => attempt.Id,
+                (log, attempt) => new
+                {
+                    attempt.ExamId,
+                    log.AttemptId,
+                    attempt.CandidateId,
+                    log.ProctorId,
+                    log.EventType,
+                    log.EventDetail,
+                    log.LoggedAtUtc
+                })
+            .ToListAsync(ct);
+
+        var sb = new StringBuilder();
+        sb.AppendLine("ExamId,AttemptId,CandidateId,ProctorId,EventType,EventDetail,LoggedAtUtc");
+        foreach (var row in rows)
+        {
+            sb.Append(EscapeCsv(row.ExamId.ToString())).Append(',')
+                .Append(EscapeCsv(row.AttemptId.ToString())).Append(',')
+                .Append(EscapeCsv(row.CandidateId.ToString())).Append(',')
+                .Append(EscapeCsv(row.ProctorId.ToString())).Append(',')
+                .Append(EscapeCsv(row.EventType)).Append(',')
+                .Append(EscapeCsv(row.EventDetail)).Append(',')
+                .Append(EscapeCsv(row.LoggedAtUtc.ToString("O")))
+                .AppendLine();
+        }
+
+        return sb.ToString();
+    }
+
+    private static string EscapeCsv(string? value)
+    {
+        if (string.IsNullOrEmpty(value)) return "\"\"";
+        var escaped = value.Replace("\"", "\"\"");
+        return $"\"{escaped}\"";
     }
 }
 
