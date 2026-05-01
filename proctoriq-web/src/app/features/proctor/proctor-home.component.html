@@ -91,12 +91,18 @@
     </article>
 
     <article class="card">
-      <h2>Incident Stream</h2>
+      <h2>Evidence Timeline</h2>
       <div class="stack">
         @for (inc of incidents(); track inc.loggedAtUtc + inc.attemptId + inc.eventType) {
           <div class="incident">
-            <strong>{{ inc.eventType }}</strong>
+            <div class="incident-head">
+              <strong>{{ inc.eventType }}</strong>
+              <span class="badge" [class.warning]="incidentSeverity(inc) === 'Warning'" [class.critical]="incidentSeverity(inc) === 'Critical'">
+                {{ incidentSeverity(inc) }}
+              </span>
+            </div>
             <span>{{ inc.loggedAtUtc }}</span>
+            <code>{{ inc.candidateId || '-' }}</code>
             <code>{{ inc.attemptId }}</code>
             <span>{{ inc.eventDetail }}</span>
           </div>

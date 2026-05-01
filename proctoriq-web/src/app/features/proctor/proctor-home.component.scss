@@ -76,6 +76,12 @@ tr.row-muted {
   display: grid;
   gap: 4px;
 }
+.incident-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
 
 .badge {
   display: inline-block;

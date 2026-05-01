@@ -24,10 +24,12 @@ export interface ProctorAttempt {
 
 export interface ProctorIncident {
   attemptId: string;
+  candidateId?: string;
   proctorId: string;
   eventType: string;
   eventDetail: string;
   loggedAtUtc: string;
+  severity?: 'Info' | 'Warning' | 'Critical';
 }
 
 export interface ProctorDashboard {
