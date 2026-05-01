@@ -35,6 +35,22 @@ export interface AddQuestionRequest {
   options: OptionRequest[];
 }
 
+export interface AdminQuestionOption {
+  id: string;
+  optionText: string;
+  isCorrect: boolean;
+}
+
+export interface AdminQuestion {
+  id: string;
+  questionText: string;
+  type: 'Mcq' | 'TrueFalse';
+  marks: number;
+  difficulty: string;
+  topic: string;
+  options: AdminQuestionOption[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class ExamsApiService {
   constructor(private readonly http: HttpClient) {}
@@ -49,5 +65,13 @@ export class ExamsApiService {
 
   addQuestion(examId: string, request: Omit<AddQuestionRequest, 'examId'>) {
     return this.http.post<{ questionId: string }>(`${environment.apiBaseUrl}/api/exams/${examId}/questions`, request);
+  }
+
+  listQuestionsForAdmin(examId: string) {
+    return this.http.get<AdminQuestion[]>(`${environment.apiBaseUrl}/api/exams/${examId}/questions/admin`);
+  }
+
+  updateQuestion(examId: string, questionId: string, request: Omit<AddQuestionRequest, 'examId'>) {
+    return this.http.put<void>(`${environment.apiBaseUrl}/api/exams/${examId}/questions/${questionId}`, request);
   }
 }

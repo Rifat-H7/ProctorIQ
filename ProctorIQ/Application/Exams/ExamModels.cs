@@ -17,6 +17,13 @@ public record AddQuestionRequest(
     string Difficulty,
     string Topic,
     List<OptionRequest> Options);
+public record UpdateQuestionRequest(
+    string QuestionText,
+    string Type,
+    int Marks,
+    string Difficulty,
+    string Topic,
+    List<OptionRequest> Options);
 
 public record OptionRequest(string OptionText, bool IsCorrect);
 public record StartAttemptRequest(Guid ExamId);
@@ -29,6 +36,8 @@ public interface IExamService
     Task<List<object>> ListExamsAsync(CancellationToken ct);
     Task<List<object>> ListAvailableExamsAsync(CancellationToken ct);
     Task<Guid> AddQuestionAsync(AddQuestionRequest request, CancellationToken ct);
+    Task<List<object>> GetQuestionsForAdminAsync(Guid examId, CancellationToken ct);
+    Task UpdateQuestionAsync(Guid examId, Guid questionId, UpdateQuestionRequest request, CancellationToken ct);
     Task<List<object>> GetQuestionsForCandidateAsync(Guid examId, CancellationToken ct);
     Task SoftDeleteExamAsync(Guid examId, CancellationToken ct);
 }

@@ -60,6 +60,47 @@ public class ExamService(AppDbContext db) : IExamService
         return q.Id;
     }
 
+    public async Task<List<object>> GetQuestionsForAdminAsync(Guid examId, CancellationToken ct)
+    {
+        return await db.Questions
+            .Where(x => x.ExamId == examId)
+            .Include(x => x.Options)
+            .OrderBy(x => x.Id)
+            .Select(q => (object)new
+            {
+                q.Id,
+                q.QuestionText,
+                Type = q.Type.ToString(),
+                q.Marks,
+                q.Difficulty,
+                q.Topic,
+                Options = q.Options.Select(o => new { o.Id, o.OptionText, o.IsCorrect })
+            })
+            .ToListAsync(ct);
+    }
+
+    public async Task UpdateQuestionAsync(Guid examId, Guid questionId, UpdateQuestionRequest request, CancellationToken ct)
+    {
+        var question = await db.Questions
+            .Include(x => x.Options)
+            .FirstOrDefaultAsync(x => x.Id == questionId && x.ExamId == examId, ct)
+            ?? throw new KeyNotFoundException("Question not found.");
+
+        var qType = request.Type.Equals("TrueFalse", StringComparison.OrdinalIgnoreCase) ? QuestionType.TrueFalse : QuestionType.Mcq;
+        question.QuestionText = request.QuestionText;
+        question.Type = qType;
+        question.Marks = request.Marks;
+        question.Difficulty = request.Difficulty;
+        question.Topic = request.Topic;
+
+        db.QuestionOptions.RemoveRange(question.Options);
+        question.Options = request.Options
+            .Select(o => new QuestionOption { QuestionId = question.Id, OptionText = o.OptionText, IsCorrect = o.IsCorrect })
+            .ToList();
+
+        await db.SaveChangesAsync(ct);
+    }
+
     public async Task<List<object>> GetQuestionsForCandidateAsync(Guid examId, CancellationToken ct)
     {
         var exam = await db.Exams.Include(x => x.Questions).ThenInclude(x => x.Options).FirstAsync(x => x.Id == examId, ct);

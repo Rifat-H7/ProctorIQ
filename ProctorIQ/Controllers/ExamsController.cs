@@ -30,6 +30,19 @@ public class ExamsController(IExamService exams) : ControllerBase
         return Ok(new { questionId = await exams.AddQuestionAsync(model, ct) });
     }
 
+    [HttpGet("{examId:guid}/questions/admin")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> AdminQuestions(Guid examId, CancellationToken ct) =>
+        Ok(await exams.GetQuestionsForAdminAsync(examId, ct));
+
+    [HttpPut("{examId:guid}/questions/{questionId:guid}")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> UpdateQuestion(Guid examId, Guid questionId, UpdateQuestionRequest request, CancellationToken ct)
+    {
+        await exams.UpdateQuestionAsync(examId, questionId, request, ct);
+        return NoContent();
+    }
+
     [HttpGet("{examId:guid}/questions")]
     [Authorize(Roles = "Candidate")]
     public async Task<IActionResult> CandidateQuestions(Guid examId, CancellationToken ct) =>

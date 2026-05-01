@@ -41,7 +41,7 @@
           @for (exam of exams(); track exam.id) {
             <li>
               <label>
-                <input type="radio" name="selectedExam" [value]="exam.id" [(ngModel)]="selectedExamId" />
+                <input type="radio" name="selectedExam" [value]="exam.id" [(ngModel)]="selectedExamId" (change)="onExamChange()" />
                 <span><strong>{{ exam.title }}</strong> <em>{{ exam.status }}</em></span>
               </label>
             </li>
@@ -88,5 +88,70 @@
 
       <button type="submit">Add Question</button>
     </form>
+  </article>
+
+  <article class="card">
+    <h2>Added Questions</h2>
+    @if (!selectedExamId) {
+      <p>Select an exam to view questions.</p>
+    } @else if (questionsLoading()) {
+      <p>Loading questions...</p>
+    } @else if (questions().length === 0) {
+      <p>No questions yet for this exam.</p>
+    } @else {
+      <div class="question-list">
+        @for (q of questions(); track q.id) {
+          <div class="question-item">
+            @if (editingQuestionId !== q.id) {
+              <div class="question-head">
+                <strong>{{ q.questionText }}</strong>
+                <button class="ghost" (click)="startEdit(q)">Edit</button>
+              </div>
+              <p class="question-meta">{{ q.type }} · {{ q.marks }} mark(s) · {{ q.difficulty }} · {{ q.topic }}</p>
+              <ol>
+                @for (op of q.options; track op.id) {
+                  <li [class.correct]="op.isCorrect">{{ op.optionText }}</li>
+                }
+              </ol>
+            } @else {
+              <form (ngSubmit)="saveEdit(q.id)" class="stack">
+                <label>Question Text <textarea [(ngModel)]="editModel.questionText" name="editQuestionText" rows="3" required></textarea></label>
+                <div class="row four">
+                  <label>Type
+                    <select [(ngModel)]="editModel.type" name="editType">
+                      <option value="Mcq">MCQ</option>
+                      <option value="TrueFalse">True/False</option>
+                    </select>
+                  </label>
+                  <label>Marks <input [(ngModel)]="editModel.marks" name="editMarks" type="number" min="1" required /></label>
+                  <label>Difficulty <input [(ngModel)]="editModel.difficulty" name="editDifficulty" required /></label>
+                  <label>Topic <input [(ngModel)]="editModel.topic" name="editTopic" required /></label>
+                </div>
+                <div class="row two">
+                  <label>Option A <input [(ngModel)]="editModel.optionA" name="editOptionA" /></label>
+                  <label>Option B <input [(ngModel)]="editModel.optionB" name="editOptionB" /></label>
+                </div>
+                <div class="row two">
+                  <label>Option C <input [(ngModel)]="editModel.optionC" name="editOptionC" /></label>
+                  <label>Option D <input [(ngModel)]="editModel.optionD" name="editOptionD" /></label>
+                </div>
+                <label>Correct Option
+                  <select [(ngModel)]="editModel.correctKey" name="editCorrectKey">
+                    <option value="A">A</option>
+                    <option value="B">B</option>
+                    <option value="C">C</option>
+                    <option value="D">D</option>
+                  </select>
+                </label>
+                <div class="row">
+                  <button type="submit">Save Changes</button>
+                  <button type="button" class="ghost" (click)="cancelEdit()">Cancel</button>
+                </div>
+              </form>
+            }
+          </div>
+        }
+      </div>
+    }
   </article>
 </section>
