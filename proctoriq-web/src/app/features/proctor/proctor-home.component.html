@@ -1,0 +1,119 @@
+<section class="page">
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">Proctor Console</p>
+      <h1>Live Monitoring Center</h1>
+    </div>
+    <button class="ghost" (click)="logout()">Logout</button>
+  </header>
+
+  @if (error()) { <p class="msg error">{{ error() }}</p> }
+  @if (info()) { <p class="msg info">{{ info() }}</p> }
+
+  <article class="card controls">
+    <label>Active Exam
+      <select [(ngModel)]="selectedExamId" name="selectedExamId">
+        <option value="" disabled>Select active exam</option>
+        @for (exam of exams(); track exam.id) {
+          <option [value]="exam.id">{{ exam.title }} ({{ exam.status }})</option>
+        }
+      </select>
+    </label>
+    <div class="row">
+      <button (click)="loadDashboard()">Open Dashboard</button>
+      <button class="ghost" (click)="loadActiveExams()">Refresh Exams</button>
+      <button class="ghost" (click)="exportEvidence()" [disabled]="!selectedExamId || exportingEvidence">
+        {{ exportingEvidence ? 'Exporting...' : 'Export Evidence (CSV)' }}
+      </button>
+    </div>
+    <label>Warning Message
+      <input [(ngModel)]="warningMessage" name="warningMessage" />
+    </label>
+    <label>Terminate Reason
+      <input [(ngModel)]="terminateReason" name="terminateReason" />
+    </label>
+  </article>
+
+  @if (dashboard(); as d) {
+    <article class="card summary">
+      <h2>Session Summary</h2>
+      <div class="stats">
+        <span>Total: {{ d.summary.totalAttempts }}</span>
+        <span>Connected: {{ d.summary.connected }}</span>
+        <span>Suspicious: {{ d.summary.suspicious }}</span>
+        <span>Disconnected: {{ d.summary.disconnected }}</span>
+        <span>Submitted: {{ d.summary.submitted }}</span>
+        <span>Terminated: {{ d.summary.terminated }}</span>
+        <span>Expired: {{ d.summary.expired }}</span>
+      </div>
+      <label>Filter
+        <select [(ngModel)]="statusFilter" name="statusFilter">
+          <option>All</option>
+          <option>Connected</option>
+          <option>Suspicious</option>
+          <option>Disconnected</option>
+          <option>Submitted</option>
+          <option>Terminated</option>
+          <option>Expired</option>
+        </select>
+      </label>
+    </article>
+
+    <article class="card">
+      <h2>Candidates</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Candidate</th>
+              <th>Attempt</th>
+              <th>Status</th>
+              <th>Session</th>
+              <th>Tab</th>
+              <th>Warn</th>
+              <th>Last Seen</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (a of filteredAttempts(); track a.id) {
+              <tr [class]="rowClass(a)">
+                <td><code>{{ a.candidateId }}</code></td>
+                <td><code>{{ a.id }}</code></td>
+                <td>{{ a.status }}</td>
+                <td><span [class]="badgeClass(a)">{{ a.sessionStatus }}</span></td>
+                <td>{{ a.tabSwitchCount }}</td>
+                <td>{{ a.warningCount }}</td>
+                <td>{{ a.lastSeenAtUtc || '-' }}</td>
+                <td class="actions">
+                  <button class="ghost" (click)="sendWarning(a)">Warn</button>
+                  <button (click)="terminate(a)">Terminate</button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </article>
+
+    <article class="card">
+      <h2>Evidence Timeline</h2>
+      <div class="stack">
+        @for (inc of incidents(); track inc.loggedAtUtc + inc.attemptId + inc.eventType) {
+          <div class="incident">
+            <div class="incident-head">
+              <strong>{{ inc.eventType }}</strong>
+              <span class="badge" [class.warning]="incidentSeverity(inc) === 'Warning'" [class.critical]="incidentSeverity(inc) === 'Critical'">
+                {{ incidentSeverity(inc) }}
+              </span>
+            </div>
+            <span>{{ inc.loggedAtUtc }}</span>
+            <code>{{ inc.candidateId || '-' }}</code>
+            <code>{{ inc.attemptId }}</code>
+            <span>{{ inc.eventDetail }}</span>
+          </div>
+        }
+      </div>
+    </article>
+  }
+</section>

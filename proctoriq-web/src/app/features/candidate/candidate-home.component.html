@@ -1,0 +1,92 @@
+<section class="page">
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">Candidate Console</p>
+      <h1>Exam Workspace</h1>
+    </div>
+    <button class="ghost" (click)="logout()">Logout</button>
+  </header>
+
+  @if (error()) { <p class="msg error">{{ error() }}</p> }
+  @if (message()) { <p class="msg success">{{ message() }}</p> }
+  @if (timerSeconds() !== null) { <p class="msg timer">Time Left: {{ timerSeconds() }}s</p> }
+
+  @if (!started && !result()) {
+    <article class="card">
+      <h2>Start Exam</h2>
+      @if (loading()) {
+        <p>Loading exams...</p>
+      } @else {
+        <label>Select Exam
+          <select [(ngModel)]="selectedExamId" name="selectedExamId">
+            <option value="" disabled>Select one</option>
+            @for (exam of exams(); track exam.id) {
+              <option [value]="exam.id">{{ exam.title }} ({{ exam.status }})</option>
+            }
+          </select>
+        </label>
+        <div class="row">
+          <button (click)="startAttempt()">Start Attempt</button>
+          <button class="ghost" (click)="loadExams()">Refresh</button>
+        </div>
+      }
+    </article>
+  }
+
+  @if (started && currentQuestion; as q) {
+    <article class="card">
+      <div class="question-head">
+        <h2>Question {{ currentIndex + 1 }} / {{ questions().length }}</h2>
+        <span class="monitor-badge">Lockdown Active</span>
+      </div>
+      <p class="lockdown-note">Copy/paste, right-click, shortcuts, and fullscreen exits are monitored and logged.</p>
+      <p class="qtext">{{ q.questionText }}</p>
+
+      @if (q.type === 'Written') {
+        <label>Written Response
+          <textarea
+            [(ngModel)]="textAnswers[q.id]"
+            [name]="'answer_' + q.id"
+            rows="6"
+            placeholder="Write your answer here..."></textarea>
+        </label>
+        <button type="button" class="ghost" (click)="saveWrittenAnswer()">Save Written Answer</button>
+      } @else {
+        <div class="options">
+          @for (opt of displayOptions(q); track opt.id) {
+            <label class="option-row">
+              <input
+                type="radio"
+                [name]="q.id"
+                [checked]="optionAnswers[q.id] === opt.id"
+                (change)="selectAnswer(opt.id)" />
+              {{ opt.optionText }}
+            </label>
+          }
+        </div>
+      }
+
+      <div class="row">
+        <button class="ghost" (click)="prevQuestion()" [disabled]="currentIndex === 0">Previous</button>
+        <button class="ghost" (click)="nextQuestion()" [disabled]="currentIndex >= questions().length - 1">Next</button>
+        <button (click)="submitAttempt()" [disabled]="submitting() || isTerminated()">{{ submitting() ? 'Submitting...' : 'Submit Attempt' }}</button>
+      </div>
+
+      @if (saving()) { <p>Saving answer...</p> }
+    </article>
+  }
+
+  @if (result(); as r) {
+    <article class="card result">
+      <h2>Result Summary</h2>
+      <p>Status: <strong>{{ r.status }}</strong></p>
+      <p>Score: <strong>{{ r.score ?? 'N/A' }}</strong></p>
+      <p>Percentage: <strong>{{ r.percentage ?? 'N/A' }}</strong></p>
+      <p>Outcome: <strong>{{ r.isPassed === null ? 'Pending Manual Review' : (r.isPassed ? 'Passed' : 'Not Passed') }}</strong></p>
+      <div class="row">
+        <button (click)="downloadCertificate()">Download Certificate</button>
+        <button class="ghost" (click)="restartFlow()">Back to Exams</button>
+      </div>
+    </article>
+  }
+</section>

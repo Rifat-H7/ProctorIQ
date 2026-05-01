@@ -1,0 +1,171 @@
+<section class="page">
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">Admin Console</p>
+      <h1>Exam Builder</h1>
+    </div>
+    <button class="ghost" (click)="logout()">Logout</button>
+  </header>
+
+  @if (error()) { <p class="msg error">{{ error() }}</p> }
+  @if (success()) { <p class="msg success">{{ success() }}</p> }
+
+  <div class="grid">
+    <article class="card">
+      <h2>Create Exam</h2>
+      <form (ngSubmit)="createExam()" class="stack">
+        <label>Title <input [(ngModel)]="createModel.title" name="title" required /></label>
+        <div class="row two">
+          <label>Duration (minutes) <input [(ngModel)]="createModel.durationMinutes" name="durationMinutes" type="number" min="1" required /></label>
+          <label>Total Marks <input [(ngModel)]="createModel.totalMarks" name="totalMarks" type="number" min="1" required /></label>
+        </div>
+        <div class="row two">
+          <label>Pass Marks <input [(ngModel)]="createModel.passMarks" name="passMarks" type="number" min="0" required /></label>
+          <label class="inline"><input [(ngModel)]="createModel.isRandomised" name="isRandomised" type="checkbox" /> Randomize Questions</label>
+        </div>
+        <label>Start (local) <input [(ngModel)]="createModel.startLocal" name="startLocal" type="datetime-local" required /></label>
+        <label>End (local) <input [(ngModel)]="createModel.endLocal" name="endLocal" type="datetime-local" required /></label>
+        <button type="submit">Create Exam</button>
+      </form>
+    </article>
+
+    <article class="card">
+      <div class="card-head">
+        <h2>Existing Exams</h2>
+        <button class="ghost" (click)="loadExams()">Refresh</button>
+      </div>
+      @if (loading()) {
+        <p>Loading exams...</p>
+      } @else {
+        <ul class="exam-list">
+          @for (exam of exams(); track exam.id) {
+            <li>
+              <label>
+                <input type="radio" name="selectedExam" [value]="exam.id" [(ngModel)]="selectedExamId" (change)="onExamChange()" />
+                <span><strong>{{ exam.title }}</strong> <em>{{ exam.status }}</em></span>
+              </label>
+            </li>
+          }
+        </ul>
+      }
+    </article>
+  </div>
+
+  <article class="card">
+    <h2>Question Composer</h2>
+    <p class="selected">Selected Exam: <code>{{ selectedExamId || 'none' }}</code></p>
+    <form (ngSubmit)="addQuestion()" class="stack">
+      <label>Question Text <textarea [(ngModel)]="questionModel.questionText" name="questionText" rows="3" required></textarea></label>
+      <div class="row four">
+        <label>Type
+          <select [(ngModel)]="questionModel.type" name="type" (change)="onCreateTypeChanged()">
+            <option value="Mcq">MCQ</option>
+            <option value="TrueFalse">True/False</option>
+            <option value="Written">Written</option>
+          </select>
+        </label>
+        <label>Marks <input [(ngModel)]="questionModel.marks" name="marks" type="number" min="1" required /></label>
+        <label>Difficulty <input [(ngModel)]="questionModel.difficulty" name="difficulty" required /></label>
+        <label>Topic <input [(ngModel)]="questionModel.topic" name="topic" required /></label>
+      </div>
+
+      @if (questionModel.type !== 'Written') {
+        <div class="row two">
+          <label>Option A <input [(ngModel)]="questionModel.optionA" name="optionA" /></label>
+          <label>Option B <input [(ngModel)]="questionModel.optionB" name="optionB" /></label>
+        </div>
+        @if (questionModel.type === 'Mcq') {
+          <div class="row two">
+            <label>Option C <input [(ngModel)]="questionModel.optionC" name="optionC" /></label>
+            <label>Option D <input [(ngModel)]="questionModel.optionD" name="optionD" /></label>
+          </div>
+        }
+
+        <label>Correct Option
+          <select [(ngModel)]="questionModel.correctKey" name="correctKey">
+            <option value="A">A</option>
+            <option value="B">B</option>
+            @if (questionModel.type === 'Mcq') {
+              <option value="C">C</option>
+              <option value="D">D</option>
+            }
+          </select>
+        </label>
+      }
+
+      <button type="submit">Add Question</button>
+    </form>
+  </article>
+
+  <article class="card">
+    <h2>Added Questions</h2>
+    @if (!selectedExamId) {
+      <p>Select an exam to view questions.</p>
+    } @else if (questionsLoading()) {
+      <p>Loading questions...</p>
+    } @else if (questions().length === 0) {
+      <p>No questions yet for this exam.</p>
+    } @else {
+      <div class="question-list">
+        @for (q of questions(); track q.id) {
+          <div class="question-item">
+            @if (editingQuestionId !== q.id) {
+              <div class="question-head">
+                <strong>{{ q.questionText }}</strong>
+                <button class="ghost" (click)="startEdit(q)">Edit</button>
+              </div>
+              <p class="question-meta">{{ q.type }} · {{ q.marks }} mark(s) · {{ q.difficulty }} · {{ q.topic }}</p>
+              <ol>
+                @for (op of q.options; track op.id) {
+                  <li [class.correct]="op.isCorrect">{{ op.optionText }}</li>
+                }
+              </ol>
+            } @else {
+              <form (ngSubmit)="saveEdit(q.id)" class="stack">
+                <label>Question Text <textarea [(ngModel)]="editModel.questionText" name="editQuestionText" rows="3" required></textarea></label>
+                <div class="row four">
+                  <label>Type
+                    <select [(ngModel)]="editModel.type" name="editType" (change)="onEditTypeChanged()">
+                      <option value="Mcq">MCQ</option>
+                      <option value="TrueFalse">True/False</option>
+                      <option value="Written">Written</option>
+                    </select>
+                  </label>
+                  <label>Marks <input [(ngModel)]="editModel.marks" name="editMarks" type="number" min="1" required /></label>
+                  <label>Difficulty <input [(ngModel)]="editModel.difficulty" name="editDifficulty" required /></label>
+                  <label>Topic <input [(ngModel)]="editModel.topic" name="editTopic" required /></label>
+                </div>
+                @if (editModel.type !== 'Written') {
+                  <div class="row two">
+                    <label>Option A <input [(ngModel)]="editModel.optionA" name="editOptionA" /></label>
+                    <label>Option B <input [(ngModel)]="editModel.optionB" name="editOptionB" /></label>
+                  </div>
+                  @if (editModel.type === 'Mcq') {
+                    <div class="row two">
+                      <label>Option C <input [(ngModel)]="editModel.optionC" name="editOptionC" /></label>
+                      <label>Option D <input [(ngModel)]="editModel.optionD" name="editOptionD" /></label>
+                    </div>
+                  }
+                  <label>Correct Option
+                    <select [(ngModel)]="editModel.correctKey" name="editCorrectKey">
+                      <option value="A">A</option>
+                      <option value="B">B</option>
+                      @if (editModel.type === 'Mcq') {
+                        <option value="C">C</option>
+                        <option value="D">D</option>
+                      }
+                    </select>
+                  </label>
+                }
+                <div class="row">
+                  <button type="submit">Save Changes</button>
+                  <button type="button" class="ghost" (click)="cancelEdit()">Cancel</button>
+                </div>
+              </form>
+            }
+          </div>
+        }
+      </div>
+    }
+  </article>
+</section>

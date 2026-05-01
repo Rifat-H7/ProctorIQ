@@ -1,0 +1,30 @@
+<div class="auth-wrap">
+  <section class="auth-hero">
+    <p class="eyebrow">ProctorIQ</p>
+    <h1>Create your workspace access.</h1>
+    <p>Pick a role and start managing exams, candidates, or proctoring sessions.</p>
+  </section>
+
+  <form (ngSubmit)="submit()" class="card">
+    <h2>Create Account</h2>
+    <label>Full name
+      <input [(ngModel)]="fullName" name="fullName" required />
+    </label>
+    <label>Email
+      <input [(ngModel)]="email" name="email" type="email" required />
+    </label>
+    <label>Password
+      <input [(ngModel)]="password" name="password" type="password" required />
+    </label>
+    <label>Role
+      <select [(ngModel)]="role" name="role">
+        <option value="Candidate">Candidate</option>
+        <option value="Proctor">Proctor</option>
+        <option value="Admin">Admin</option>
+      </select>
+    </label>
+    <button type="submit">Register</button>
+    @if (error()) { <p class="error">{{ error() }}</p> }
+    <p class="switch">Already have access? <a routerLink="/login">Back to login</a></p>
+  </form>
+</div>
