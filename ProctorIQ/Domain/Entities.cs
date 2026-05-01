@@ -73,6 +73,7 @@ public class CandidateAnswer
     public Guid AttemptId { get; set; }
     public Guid QuestionId { get; set; }
     public Guid? SelectedOptionId { get; set; }
+    public string? SelectedTextAnswer { get; set; }
     public bool IsCorrect { get; set; }
     public decimal MarksAwarded { get; set; }
 }

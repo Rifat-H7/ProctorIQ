@@ -44,7 +44,10 @@ public class ExamService(AppDbContext db) : IExamService
 
     public async Task<Guid> AddQuestionAsync(AddQuestionRequest request, CancellationToken ct)
     {
-        var qType = request.Type.Equals("TrueFalse", StringComparison.OrdinalIgnoreCase) ? QuestionType.TrueFalse : QuestionType.Mcq;
+        var qType = ResolveQuestionType(request.Type);
+        var options = qType == QuestionType.Written
+            ? []
+            : request.Options.Select(o => new QuestionOption { OptionText = o.OptionText, IsCorrect = o.IsCorrect }).ToList();
         var q = new Question
         {
             ExamId = request.ExamId,
@@ -53,7 +56,7 @@ public class ExamService(AppDbContext db) : IExamService
             Marks = request.Marks,
             Difficulty = request.Difficulty,
             Topic = request.Topic,
-            Options = request.Options.Select(o => new QuestionOption { OptionText = o.OptionText, IsCorrect = o.IsCorrect }).ToList()
+            Options = options
         };
         db.Questions.Add(q);
         await db.SaveChangesAsync(ct);
@@ -86,7 +89,7 @@ public class ExamService(AppDbContext db) : IExamService
             .FirstOrDefaultAsync(x => x.Id == questionId && x.ExamId == examId, ct)
             ?? throw new KeyNotFoundException("Question not found.");
 
-        var qType = request.Type.Equals("TrueFalse", StringComparison.OrdinalIgnoreCase) ? QuestionType.TrueFalse : QuestionType.Mcq;
+        var qType = ResolveQuestionType(request.Type);
         question.QuestionText = request.QuestionText;
         question.Type = qType;
         question.Marks = request.Marks;
@@ -94,9 +97,9 @@ public class ExamService(AppDbContext db) : IExamService
         question.Topic = request.Topic;
 
         db.QuestionOptions.RemoveRange(question.Options);
-        question.Options = request.Options
-            .Select(o => new QuestionOption { QuestionId = question.Id, OptionText = o.OptionText, IsCorrect = o.IsCorrect })
-            .ToList();
+        question.Options = qType == QuestionType.Written
+            ? []
+            : request.Options.Select(o => new QuestionOption { QuestionId = question.Id, OptionText = o.OptionText, IsCorrect = o.IsCorrect }).ToList();
 
         await db.SaveChangesAsync(ct);
     }
@@ -113,6 +116,13 @@ public class ExamService(AppDbContext db) : IExamService
             q.Marks,
             Options = q.Options.Select(o => new { o.Id, o.OptionText })
         }).ToList();
+    }
+
+    private static QuestionType ResolveQuestionType(string raw)
+    {
+        if (raw.Equals("TrueFalse", StringComparison.OrdinalIgnoreCase)) return QuestionType.TrueFalse;
+        if (raw.Equals("Written", StringComparison.OrdinalIgnoreCase)) return QuestionType.Written;
+        return QuestionType.Mcq;
     }
 
     public async Task SoftDeleteExamAsync(Guid examId, CancellationToken ct)
@@ -146,13 +156,23 @@ public class AttemptService(AppDbContext db) : IAttemptService
     {
         var attempt = await db.ExamAttempts.FirstAsync(x => x.Id == attemptId && x.CandidateId == candidateId, ct);
         if (attempt.Status != AttemptStatus.InProgress) throw new InvalidOperationException("Attempt is closed.");
+        var questionType = await db.Questions.Where(x => x.Id == request.QuestionId).Select(x => x.Type).FirstAsync(ct);
         var answer = await db.CandidateAnswers.FirstOrDefaultAsync(x => x.AttemptId == attemptId && x.QuestionId == request.QuestionId, ct);
         if (answer is null)
         {
             answer = new CandidateAnswer { AttemptId = attemptId, QuestionId = request.QuestionId };
             db.CandidateAnswers.Add(answer);
         }
-        answer.SelectedOptionId = request.SelectedOptionId;
+        if (questionType == QuestionType.Written)
+        {
+            answer.SelectedTextAnswer = request.SelectedTextAnswer?.Trim();
+            answer.SelectedOptionId = null;
+        }
+        else
+        {
+            answer.SelectedOptionId = request.SelectedOptionId;
+            answer.SelectedTextAnswer = null;
+        }
         await db.SaveChangesAsync(ct);
     }
 
@@ -175,7 +195,10 @@ public class AttemptService(AppDbContext db) : IAttemptService
 
         var answers = await db.CandidateAnswers
             .Where(x => x.AttemptId == attempt.Id)
-            .ToDictionaryAsync(x => x.QuestionId, x => x.SelectedOptionId, ct);
+            .ToDictionaryAsync(
+                x => x.QuestionId,
+                x => new ResumeAnswerItem(x.SelectedOptionId, x.SelectedTextAnswer),
+                ct);
 
         return new AttemptResumeResponse(attempt.Id, attempt.Status.ToString(), answers);
     }

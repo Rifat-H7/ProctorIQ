@@ -13,7 +13,7 @@ export interface CandidateExamSummary {
 export interface CandidateQuestion {
   id: string;
   questionText: string;
-  type: string;
+  type: 'Mcq' | 'TrueFalse' | 'Written';
   marks: number;
   options: { id: string; optionText: string }[];
 }
@@ -30,7 +30,7 @@ export interface AttemptResult {
 export interface AttemptResumeResponse {
   attemptId: string;
   status: string;
-  answers: Record<string, string | null>;
+  answers: Record<string, { selectedOptionId: string | null; selectedTextAnswer: string | null }>;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -53,8 +53,12 @@ export class CandidateApiService {
     return this.http.get<CandidateQuestion[]>(`${environment.apiBaseUrl}/api/exams/${examId}/questions`);
   }
 
-  saveAnswer(attemptId: string, questionId: string, selectedOptionId: string | null) {
-    return this.http.put<void>(`${environment.apiBaseUrl}/api/attempts/${attemptId}/answer`, { questionId, selectedOptionId });
+  saveAnswer(attemptId: string, questionId: string, selectedOptionId: string | null, selectedTextAnswer: string | null = null) {
+    return this.http.put<void>(`${environment.apiBaseUrl}/api/attempts/${attemptId}/answer`, {
+      questionId,
+      selectedOptionId,
+      selectedTextAnswer
+    });
   }
 
   submitAttempt(attemptId: string) {

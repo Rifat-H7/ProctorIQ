@@ -58,9 +58,10 @@
       <label>Question Text <textarea [(ngModel)]="questionModel.questionText" name="questionText" rows="3" required></textarea></label>
       <div class="row four">
         <label>Type
-          <select [(ngModel)]="questionModel.type" name="type">
+          <select [(ngModel)]="questionModel.type" name="type" (change)="onCreateTypeChanged()">
             <option value="Mcq">MCQ</option>
             <option value="TrueFalse">True/False</option>
+            <option value="Written">Written</option>
           </select>
         </label>
         <label>Marks <input [(ngModel)]="questionModel.marks" name="marks" type="number" min="1" required /></label>
@@ -68,23 +69,29 @@
         <label>Topic <input [(ngModel)]="questionModel.topic" name="topic" required /></label>
       </div>
 
-      <div class="row two">
-        <label>Option A <input [(ngModel)]="questionModel.optionA" name="optionA" /></label>
-        <label>Option B <input [(ngModel)]="questionModel.optionB" name="optionB" /></label>
-      </div>
-      <div class="row two">
-        <label>Option C <input [(ngModel)]="questionModel.optionC" name="optionC" /></label>
-        <label>Option D <input [(ngModel)]="questionModel.optionD" name="optionD" /></label>
-      </div>
+      @if (questionModel.type !== 'Written') {
+        <div class="row two">
+          <label>Option A <input [(ngModel)]="questionModel.optionA" name="optionA" /></label>
+          <label>Option B <input [(ngModel)]="questionModel.optionB" name="optionB" /></label>
+        </div>
+        @if (questionModel.type === 'Mcq') {
+          <div class="row two">
+            <label>Option C <input [(ngModel)]="questionModel.optionC" name="optionC" /></label>
+            <label>Option D <input [(ngModel)]="questionModel.optionD" name="optionD" /></label>
+          </div>
+        }
 
-      <label>Correct Option
-        <select [(ngModel)]="questionModel.correctKey" name="correctKey">
-          <option value="A">A</option>
-          <option value="B">B</option>
-          <option value="C">C</option>
-          <option value="D">D</option>
-        </select>
-      </label>
+        <label>Correct Option
+          <select [(ngModel)]="questionModel.correctKey" name="correctKey">
+            <option value="A">A</option>
+            <option value="B">B</option>
+            @if (questionModel.type === 'Mcq') {
+              <option value="C">C</option>
+              <option value="D">D</option>
+            }
+          </select>
+        </label>
+      }
 
       <button type="submit">Add Question</button>
     </form>
@@ -118,31 +125,38 @@
                 <label>Question Text <textarea [(ngModel)]="editModel.questionText" name="editQuestionText" rows="3" required></textarea></label>
                 <div class="row four">
                   <label>Type
-                    <select [(ngModel)]="editModel.type" name="editType">
+                    <select [(ngModel)]="editModel.type" name="editType" (change)="onEditTypeChanged()">
                       <option value="Mcq">MCQ</option>
                       <option value="TrueFalse">True/False</option>
+                      <option value="Written">Written</option>
                     </select>
                   </label>
                   <label>Marks <input [(ngModel)]="editModel.marks" name="editMarks" type="number" min="1" required /></label>
                   <label>Difficulty <input [(ngModel)]="editModel.difficulty" name="editDifficulty" required /></label>
                   <label>Topic <input [(ngModel)]="editModel.topic" name="editTopic" required /></label>
                 </div>
-                <div class="row two">
-                  <label>Option A <input [(ngModel)]="editModel.optionA" name="editOptionA" /></label>
-                  <label>Option B <input [(ngModel)]="editModel.optionB" name="editOptionB" /></label>
-                </div>
-                <div class="row two">
-                  <label>Option C <input [(ngModel)]="editModel.optionC" name="editOptionC" /></label>
-                  <label>Option D <input [(ngModel)]="editModel.optionD" name="editOptionD" /></label>
-                </div>
-                <label>Correct Option
-                  <select [(ngModel)]="editModel.correctKey" name="editCorrectKey">
-                    <option value="A">A</option>
-                    <option value="B">B</option>
-                    <option value="C">C</option>
-                    <option value="D">D</option>
-                  </select>
-                </label>
+                @if (editModel.type !== 'Written') {
+                  <div class="row two">
+                    <label>Option A <input [(ngModel)]="editModel.optionA" name="editOptionA" /></label>
+                    <label>Option B <input [(ngModel)]="editModel.optionB" name="editOptionB" /></label>
+                  </div>
+                  @if (editModel.type === 'Mcq') {
+                    <div class="row two">
+                      <label>Option C <input [(ngModel)]="editModel.optionC" name="editOptionC" /></label>
+                      <label>Option D <input [(ngModel)]="editModel.optionD" name="editOptionD" /></label>
+                    </div>
+                  }
+                  <label>Correct Option
+                    <select [(ngModel)]="editModel.correctKey" name="editCorrectKey">
+                      <option value="A">A</option>
+                      <option value="B">B</option>
+                      @if (editModel.type === 'Mcq') {
+                        <option value="C">C</option>
+                        <option value="D">D</option>
+                      }
+                    </select>
+                  </label>
+                }
                 <div class="row">
                   <button type="submit">Save Changes</button>
                   <button type="button" class="ghost" (click)="cancelEdit()">Cancel</button>

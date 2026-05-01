@@ -33,7 +33,7 @@ export class AdminHomeComponent implements OnInit {
 
   questionModel = {
     questionText: '',
-    type: 'Mcq' as 'Mcq' | 'TrueFalse',
+    type: 'Mcq' as 'Mcq' | 'TrueFalse' | 'Written',
     marks: 1,
     difficulty: 'Medium',
     topic: 'General',
@@ -46,7 +46,7 @@ export class AdminHomeComponent implements OnInit {
 
   editModel = {
     questionText: '',
-    type: 'Mcq' as 'Mcq' | 'TrueFalse',
+    type: 'Mcq' as 'Mcq' | 'TrueFalse' | 'Written',
     marks: 1,
     difficulty: 'Medium',
     topic: 'General',
@@ -120,17 +120,21 @@ export class AdminHomeComponent implements OnInit {
       return;
     }
 
-    const options = [
-      { key: 'A', text: this.questionModel.optionA },
-      { key: 'B', text: this.questionModel.optionB },
-      { key: 'C', text: this.questionModel.optionC },
-      { key: 'D', text: this.questionModel.optionD }
-    ]
-      .filter((o) => o.text.trim().length > 0)
-      .map((o) => ({ optionText: o.text.trim(), isCorrect: o.key === this.questionModel.correctKey }));
+    const options = this.questionModel.type === 'Written' ? [] : this.buildOptions(
+      this.questionModel.type,
+      this.questionModel.optionA,
+      this.questionModel.optionB,
+      this.questionModel.optionC,
+      this.questionModel.optionD,
+      this.questionModel.correctKey
+    );
 
-    if (options.length < 2) {
+    if (this.questionModel.type !== 'Written' && options.length < 2) {
       this.error.set('Add at least two options.');
+      return;
+    }
+    if (this.questionModel.type === 'TrueFalse' && options.length !== 2) {
+      this.error.set('True/False must have exactly two options: True and False.');
       return;
     }
 
@@ -191,7 +195,7 @@ export class AdminHomeComponent implements OnInit {
 
     this.editModel = {
       questionText: question.questionText,
-      type: question.type,
+      type: question.type ?? 'Mcq',
       marks: question.marks,
       difficulty: question.difficulty,
       topic: question.topic,
@@ -201,6 +205,10 @@ export class AdminHomeComponent implements OnInit {
       optionD: findByIndex(3),
       correctKey: keys[Math.max(0, correctIndex)] ?? 'A'
     };
+
+    if (this.editModel.type === 'TrueFalse') {
+      this.applyTrueFalsePreset('edit');
+    }
   }
 
   cancelEdit() {
@@ -210,17 +218,21 @@ export class AdminHomeComponent implements OnInit {
   saveEdit(questionId: string) {
     if (!this.selectedExamId) return;
 
-    const options = [
-      { key: 'A', text: this.editModel.optionA },
-      { key: 'B', text: this.editModel.optionB },
-      { key: 'C', text: this.editModel.optionC },
-      { key: 'D', text: this.editModel.optionD }
-    ]
-      .filter((o) => o.text.trim().length > 0)
-      .map((o) => ({ optionText: o.text.trim(), isCorrect: o.key === this.editModel.correctKey }));
+    const options = this.editModel.type === 'Written' ? [] : this.buildOptions(
+      this.editModel.type,
+      this.editModel.optionA,
+      this.editModel.optionB,
+      this.editModel.optionC,
+      this.editModel.optionD,
+      this.editModel.correctKey
+    );
 
-    if (options.length < 2) {
+    if (this.editModel.type !== 'Written' && options.length < 2) {
       this.error.set('Edited question must have at least two options.');
+      return;
+    }
+    if (this.editModel.type === 'TrueFalse' && options.length !== 2) {
+      this.error.set('True/False must have exactly two options: True and False.');
       return;
     }
 
@@ -243,5 +255,56 @@ export class AdminHomeComponent implements OnInit {
 
   logout() {
     this.auth.logout();
+  }
+
+  onCreateTypeChanged() {
+    if (this.questionModel.type === 'TrueFalse') {
+      this.applyTrueFalsePreset('create');
+    }
+  }
+
+  onEditTypeChanged() {
+    if (this.editModel.type === 'TrueFalse') {
+      this.applyTrueFalsePreset('edit');
+    }
+  }
+
+  private buildOptions(type: 'Mcq' | 'TrueFalse' | 'Written', optionA: string, optionB: string, optionC: string, optionD: string, correctKey: string) {
+    if (type === 'TrueFalse') {
+      return [
+        { optionText: optionA.trim(), isCorrect: correctKey === 'A' },
+        { optionText: optionB.trim(), isCorrect: correctKey === 'B' }
+      ];
+    }
+
+    return [
+      { key: 'A', text: optionA },
+      { key: 'B', text: optionB },
+      { key: 'C', text: optionC },
+      { key: 'D', text: optionD }
+    ]
+      .filter((o) => o.text.trim().length > 0)
+      .map((o) => ({ optionText: o.text.trim(), isCorrect: o.key === correctKey }));
+  }
+
+  private applyTrueFalsePreset(mode: 'create' | 'edit') {
+    if (mode === 'create') {
+      this.questionModel.optionA = 'True';
+      this.questionModel.optionB = 'False';
+      this.questionModel.optionC = '';
+      this.questionModel.optionD = '';
+      if (this.questionModel.correctKey !== 'A' && this.questionModel.correctKey !== 'B') {
+        this.questionModel.correctKey = 'A';
+      }
+      return;
+    }
+
+    this.editModel.optionA = 'True';
+    this.editModel.optionB = 'False';
+    this.editModel.optionC = '';
+    this.editModel.optionD = '';
+    if (this.editModel.correctKey !== 'A' && this.editModel.correctKey !== 'B') {
+      this.editModel.correctKey = 'A';
+    }
   }
 }

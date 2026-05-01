@@ -30,7 +30,8 @@ export class CandidateHomeComponent implements OnInit, OnDestroy {
   attemptId: string | null = null;
   started = false;
   currentIndex = 0;
-  answers: Record<string, string | null> = {};
+  optionAnswers: Record<string, string | null> = {};
+  textAnswers: Record<string, string> = {};
 
   private hub: signalR.HubConnection | null = null;
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
@@ -107,14 +108,19 @@ export class CandidateHomeComponent implements OnInit, OnDestroy {
     this.api.getQuestions(this.selectedExamId).subscribe({
       next: (questions) => {
         this.questions.set(questions);
-        this.answers = {};
-        for (const q of questions) this.answers[q.id] = null;
-
-        for (const [questionId, selectedOptionId] of Object.entries(resume.answers ?? {})) {
-          this.answers[questionId] = selectedOptionId;
+        this.optionAnswers = {};
+        this.textAnswers = {};
+        for (const q of questions) {
+          this.optionAnswers[q.id] = null;
+          this.textAnswers[q.id] = '';
         }
 
-        const firstUnanswered = questions.findIndex((q) => !this.answers[q.id]);
+        for (const [questionId, answer] of Object.entries(resume.answers ?? {})) {
+          this.optionAnswers[questionId] = answer?.selectedOptionId ?? null;
+          this.textAnswers[questionId] = answer?.selectedTextAnswer ?? '';
+        }
+
+        const firstUnanswered = questions.findIndex((q) => !this.hasAnswer(q.id, q.type));
         this.currentIndex = firstUnanswered >= 0 ? firstUnanswered : 0;
         this.started = true;
         this.loading.set(false);
@@ -137,9 +143,9 @@ export class CandidateHomeComponent implements OnInit, OnDestroy {
     const q = this.currentQuestion;
     if (!q || !this.attemptId || this.isTerminated()) return;
 
-    this.answers[q.id] = optionId;
+    this.optionAnswers[q.id] = optionId;
     this.saving.set(true);
-    this.api.saveAnswer(this.attemptId, q.id, optionId).subscribe({
+    this.api.saveAnswer(this.attemptId, q.id, optionId, null).subscribe({
       next: () => {
         this.saving.set(false);
         this.message.set('Answer saved.');
@@ -147,6 +153,24 @@ export class CandidateHomeComponent implements OnInit, OnDestroy {
       error: () => {
         this.saving.set(false);
         this.error.set('Failed to save answer.');
+      }
+    });
+  }
+
+  saveWrittenAnswer() {
+    const q = this.currentQuestion;
+    if (!q || q.type !== 'Written' || !this.attemptId || this.isTerminated()) return;
+
+    const text = (this.textAnswers[q.id] ?? '').trim();
+    this.saving.set(true);
+    this.api.saveAnswer(this.attemptId, q.id, null, text).subscribe({
+      next: () => {
+        this.saving.set(false);
+        this.message.set('Written answer saved.');
+      },
+      error: () => {
+        this.saving.set(false);
+        this.error.set('Failed to save written answer.');
       }
     });
   }
@@ -216,7 +240,8 @@ export class CandidateHomeComponent implements OnInit, OnDestroy {
     this.started = false;
     this.questions.set([]);
     this.currentIndex = 0;
-    this.answers = {};
+    this.optionAnswers = {};
+    this.textAnswers = {};
     this.result.set(null);
     this.attemptId = null;
     this.timerSeconds.set(null);
@@ -357,6 +382,18 @@ export class CandidateHomeComponent implements OnInit, OnDestroy {
 
     this.lastLockdownSignalAt[signalType] = now;
     this.hub.invoke('LockdownSignal', this.attemptId, signalType, detail).catch(() => undefined);
+  }
+
+  private hasAnswer(questionId: string, type: CandidateQuestion['type']): boolean {
+    if (type === 'Written') return (this.textAnswers[questionId] ?? '').trim().length > 0;
+    return !!this.optionAnswers[questionId];
+  }
+
+  displayOptions(question: CandidateQuestion) {
+    if (question.type === 'TrueFalse') {
+      return (question.options ?? []).slice(0, 2);
+    }
+    return question.options ?? [];
   }
 
   private startHeartbeat() {

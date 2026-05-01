@@ -28,7 +28,7 @@ export interface OptionRequest {
 export interface AddQuestionRequest {
   examId: string;
   questionText: string;
-  type: 'Mcq' | 'TrueFalse';
+  type: 'Mcq' | 'TrueFalse' | 'Written';
   marks: number;
   difficulty: string;
   topic: string;
@@ -44,7 +44,7 @@ export interface AdminQuestionOption {
 export interface AdminQuestion {
   id: string;
   questionText: string;
-  type: 'Mcq' | 'TrueFalse';
+  type: 'Mcq' | 'TrueFalse' | 'Written';
   marks: number;
   difficulty: string;
   topic: string;

@@ -27,8 +27,9 @@ public record UpdateQuestionRequest(
 
 public record OptionRequest(string OptionText, bool IsCorrect);
 public record StartAttemptRequest(Guid ExamId);
-public record SaveAnswerRequest(Guid QuestionId, Guid? SelectedOptionId);
-public record AttemptResumeResponse(Guid AttemptId, string Status, Dictionary<Guid, Guid?> Answers);
+public record SaveAnswerRequest(Guid QuestionId, Guid? SelectedOptionId, string? SelectedTextAnswer);
+public record ResumeAnswerItem(Guid? SelectedOptionId, string? SelectedTextAnswer);
+public record AttemptResumeResponse(Guid AttemptId, string Status, Dictionary<Guid, ResumeAnswerItem> Answers);
 
 public interface IExamService
 {

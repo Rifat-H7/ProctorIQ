@@ -42,18 +42,29 @@
       <p class="lockdown-note">Copy/paste, right-click, shortcuts, and fullscreen exits are monitored and logged.</p>
       <p class="qtext">{{ q.questionText }}</p>
 
-      <div class="options">
-        @for (opt of q.options; track opt.id) {
-          <label class="option-row">
-            <input
-              type="radio"
-              [name]="q.id"
-              [checked]="answers[q.id] === opt.id"
-              (change)="selectAnswer(opt.id)" />
-            {{ opt.optionText }}
-          </label>
-        }
-      </div>
+      @if (q.type === 'Written') {
+        <label>Written Response
+          <textarea
+            [(ngModel)]="textAnswers[q.id]"
+            [name]="'answer_' + q.id"
+            rows="6"
+            placeholder="Write your answer here..."></textarea>
+        </label>
+        <button type="button" class="ghost" (click)="saveWrittenAnswer()">Save Written Answer</button>
+      } @else {
+        <div class="options">
+          @for (opt of displayOptions(q); track opt.id) {
+            <label class="option-row">
+              <input
+                type="radio"
+                [name]="q.id"
+                [checked]="optionAnswers[q.id] === opt.id"
+                (change)="selectAnswer(opt.id)" />
+              {{ opt.optionText }}
+            </label>
+          }
+        </div>
+      }
 
       <div class="row">
         <button class="ghost" (click)="prevQuestion()" [disabled]="currentIndex === 0">Previous</button>
@@ -71,7 +82,7 @@
       <p>Status: <strong>{{ r.status }}</strong></p>
       <p>Score: <strong>{{ r.score ?? 'N/A' }}</strong></p>
       <p>Percentage: <strong>{{ r.percentage ?? 'N/A' }}</strong></p>
-      <p>Outcome: <strong>{{ r.isPassed ? 'Passed' : 'Not Passed' }}</strong></p>
+      <p>Outcome: <strong>{{ r.isPassed === null ? 'Pending Manual Review' : (r.isPassed ? 'Passed' : 'Not Passed') }}</strong></p>
       <div class="row">
         <button (click)="downloadCertificate()">Download Certificate</button>
         <button class="ghost" (click)="restartFlow()">Back to Exams</button>
